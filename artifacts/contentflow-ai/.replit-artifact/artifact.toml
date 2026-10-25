@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "ContentFlow AI"
+description = "An AI-assisted content workspace for defining brand voice, creating and editing drafts, managing content calendars, and tracking generation usage."
+version = "1.0.0"
+id = "artifacts/contentflow-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25216
+
+[services.development]
+run = "pnpm --filter @workspace/contentflow-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/contentflow-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/contentflow-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25216"
+BASE_PATH = "/"

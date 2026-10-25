@@ -1,0 +1,670 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: ContentFlow AI API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: workspace
+    description: User-owned workspace and brand management
+  - name: content
+    description: Content library, calendar, and AI generation
+  - name: dashboard
+    description: Workspace overview and monthly usage
+  - name: plans
+    description: Public plan limits and features
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /plans:
+    get:
+      operationId: listPlans
+      tags: [plans]
+      summary: List available ContentFlow plans
+      responses:
+        "200":
+          description: Plan prices and product limits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanOption"
+  /workspace:
+    get:
+      operationId: getWorkspace
+      tags: [workspace]
+      summary: Get the signed-in user's workspace
+      responses:
+        "200":
+          description: Workspace found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createWorkspace
+      tags: [workspace]
+      summary: Create a workspace for the signed-in user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceInput"
+      responses:
+        "201":
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: The user already has a workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateWorkspace
+      tags: [workspace]
+      summary: Update the signed-in user's workspace settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUpdate"
+      responses:
+        "200":
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /brands:
+    get:
+      operationId: listBrands
+      tags: [workspace]
+      summary: List brands in the user's workspace
+      responses:
+        "200":
+          description: Brand list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Brand"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createBrand
+      tags: [workspace]
+      summary: Create a brand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrandInput"
+      responses:
+        "201":
+          description: Brand created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Brand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Workspace has reached its brand limit for the current plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /brands/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      operationId: updateBrand
+      tags: [workspace]
+      summary: Update a brand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrandUpdate"
+      responses:
+        "200":
+          description: Brand updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Brand"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteBrand
+      tags: [workspace]
+      summary: Delete a brand
+      responses:
+        "204":
+          description: Brand deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /contents:
+    get:
+      operationId: listContents
+      tags: [content]
+      summary: Search and filter saved content
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ContentStatus"
+        - name: platform
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Platform"
+        - name: brandId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Matching content
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createContent
+      tags: [content]
+      summary: Save a content item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContentInput"
+      responses:
+        "201":
+          description: Content saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /contents/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      operationId: getContent
+      tags: [content]
+      summary: Get a saved content item
+      responses:
+        "200":
+          description: Content item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateContent
+      tags: [content]
+      summary: Edit or schedule a content item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContentUpdate"
+      responses:
+        "200":
+          description: Content updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteContent
+      tags: [content]
+      summary: Delete a content item
+      responses:
+        "204":
+          description: Content deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /calendar:
+    get:
+      operationId: getCalendar
+      tags: [content]
+      summary: Get scheduled content for a calendar month
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: "^\\d{4}-\\d{2}$"
+        - name: timeZone
+          in: query
+          required: false
+          description: IANA time zone used to define the requested calendar month
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        "200":
+          description: Calendar items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get workspace overview and upcoming content
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /usage:
+    get:
+      operationId: getUsage
+      tags: [dashboard]
+      summary: Get this month's AI generation usage
+      responses:
+        "200":
+          description: Monthly usage summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /generate:
+    post:
+      operationId: generateContent
+      tags: [content]
+      summary: Generate a content draft using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateContentInput"
+      responses:
+        "200":
+          description: Generated content and updated usage
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedContent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          description: Generation prompt is too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The request ID is already processing, or was reused with a different generation brief
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Monthly usage limit reached or generation rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Gemini provider returned an error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: AI provider configuration or generation usage reservation is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "504":
+          description: Gemini provider request timed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    Workspace:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, name, createdAt, updatedAt]
+    WorkspaceInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+      required: [name]
+    WorkspaceUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+    Brand:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        industry: { type: string }
+        website: { type: ["string", "null"] }
+        brandVoice: { type: string }
+        targetAudience: { type: string }
+        contentPillars:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, name, industry, website, brandVoice, targetAudience, contentPillars, createdAt, updatedAt]
+    BrandInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        industry: { type: string, maxLength: 100 }
+        website: { type: ["string", "null"], maxLength: 500 }
+        brandVoice: { type: string, maxLength: 2000 }
+        targetAudience: { type: string, maxLength: 2000 }
+        contentPillars:
+          type: array
+          items: { type: string, maxLength: 100 }
+      required: [name, industry, brandVoice, targetAudience]
+    BrandUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        industry: { type: string, maxLength: 100 }
+        website: { type: ["string", "null"], maxLength: 500 }
+        brandVoice: { type: string, maxLength: 2000 }
+        targetAudience: { type: string, maxLength: 2000 }
+        contentPillars:
+          type: array
+          items: { type: string, maxLength: 100 }
+    Platform:
+      type: string
+      enum: [instagram, linkedin, x, facebook, tiktok, blog, email]
+    ContentType:
+      type: string
+      enum: [caption, post, thread, blog, email]
+    ContentStatus:
+      type: string
+      enum: [draft, scheduled, archived]
+    ContentItem:
+      type: object
+      properties:
+        id: { type: integer }
+        brandId: { type: integer }
+        brandName: { type: string }
+        title: { type: string }
+        body: { type: string }
+        platform: { $ref: "#/components/schemas/Platform" }
+        contentType: { $ref: "#/components/schemas/ContentType" }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        tags:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, brandId, brandName, title, body, platform, contentType, status, scheduledAt, tags, createdAt, updatedAt]
+    ContentInput:
+      type: object
+      properties:
+        brandId: { type: integer }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        body: { type: string, maxLength: 20000 }
+        platform: { $ref: "#/components/schemas/Platform" }
+        contentType: { $ref: "#/components/schemas/ContentType" }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        tags:
+          type: array
+          items: { type: string, maxLength: 50 }
+      required: [brandId, title, body, platform, contentType]
+    ContentUpdate:
+      type: object
+      properties:
+        brandId: { type: integer }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        body: { type: string, maxLength: 20000 }
+        platform: { $ref: "#/components/schemas/Platform" }
+        contentType: { $ref: "#/components/schemas/ContentType" }
+        status: { $ref: "#/components/schemas/ContentStatus" }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        tags:
+          type: array
+          items: { type: string, maxLength: 50 }
+    UsageSummary:
+      type: object
+      properties:
+        plan: { $ref: "#/components/schemas/PlanId" }
+        planName: { type: string }
+        subscriptionStatus: { $ref: "#/components/schemas/SubscriptionStatus" }
+        renewalDate: { type: ["string", "null"], format: date-time }
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        limit: { type: integer }
+        used: { type: integer }
+        remaining: { type: integer }
+        brandCount: { type: integer }
+        brandLimit: { type: integer }
+        canCreateBrand: { type: boolean }
+      required: [plan, planName, subscriptionStatus, renewalDate, periodStart, periodEnd, limit, used, remaining, brandCount, brandLimit, canCreateBrand]
+    PlanId:
+      type: string
+      enum: [free, starter, pro]
+    SubscriptionStatus:
+      type: string
+      enum: [free, active, pending, cancelled, expired]
+    PlanOption:
+      type: object
+      properties:
+        id: { $ref: "#/components/schemas/PlanId" }
+        name: { type: string }
+        monthlyPriceNgn: { type: integer }
+        generationLimit: { type: integer }
+        brandLimit: { type: integer }
+        featureFlags:
+          type: object
+          properties:
+            calendar: { type: string, enum: [basic, full] }
+            export: { type: string, enum: [basic, full] }
+          required: [calendar, export]
+        calendarDescription: { type: string }
+        exportDescription: { type: string }
+        availableForUpgrade: { type: boolean }
+        features:
+          type: array
+          items: { type: string }
+      required: [id, name, monthlyPriceNgn, generationLimit, brandLimit, featureFlags, calendarDescription, exportDescription, availableForUpgrade, features]
+    DashboardSummary:
+      type: object
+      properties:
+        workspace: { $ref: "#/components/schemas/Workspace" }
+        brandCount: { type: integer }
+        contentCount: { type: integer }
+        draftCount: { type: integer }
+        scheduledCount: { type: integer }
+        usage: { $ref: "#/components/schemas/UsageSummary" }
+        recentContent:
+          type: array
+          items: { $ref: "#/components/schemas/ContentItem" }
+        upcomingContent:
+          type: array
+          items: { $ref: "#/components/schemas/ContentItem" }
+      required: [workspace, brandCount, contentCount, draftCount, scheduledCount, usage, recentContent, upcomingContent]
+    GenerateContentInput:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+          description: Idempotency key scoped to the authenticated workspace
+        brandId: { type: integer }
+        platform: { $ref: "#/components/schemas/Platform" }
+        contentType: { $ref: "#/components/schemas/ContentType" }
+        topic: { type: string, minLength: 1, maxLength: 2000 }
+        objective: { type: string, maxLength: 1000 }
+        tone: { type: string, maxLength: 200 }
+        callToAction: { type: string, maxLength: 500 }
+      required: [requestId, brandId, platform, contentType, topic]
+    GeneratedContent:
+      type: object
+      properties:
+        title: { type: string }
+        body: { type: string }
+        usage: { $ref: "#/components/schemas/UsageSummary" }
+      required: [title, body, usage]
+

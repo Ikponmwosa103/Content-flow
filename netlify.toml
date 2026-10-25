@@ -1,0 +1,13 @@
+[build]
+command = "sh scripts/build-netlify.sh"
+publish = "artifacts/contentflow-ai/dist/public"
+
+[build.environment]
+NODE_VERSION = "24"
+BASE_PATH = "/"
+PORT = "4173"
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200

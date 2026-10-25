@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 42" fill="none">
+  <rect width="42" height="42" rx="13" fill="#327B63"/>
+  <path d="M12 27V15h5v12h-5Zm7 0V11h5v16h-5Zm7 0V18h5v9h-5Z" fill="#F5F1E8"/>
+  <text x="52" y="28" font-family="DM Sans, sans-serif" font-size="20" font-weight="700" fill="#222A3B">content<tspan fill="#327B63">flow</tspan></text>
+</svg>
