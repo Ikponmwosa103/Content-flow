@@ -241,19 +241,19 @@ export async function generateDraft(input: {
     });
     return parseGeneratedDraft(response.text);
 } catch (error) {
-    if (error instanceof AiProviderError) {
-      throw error;
+      if (error instanceof AiProviderError) {
+        throw error;
+      }
+
+      const details = statusFromProviderError(error);
+
+      console.error("[Gemini provider error]", {
+        model: GEMINI_MODEL,
+        status: details.status,
+        code: details.code,
+        message: error instanceof Error ? error.message : String(error),
+      });
+
+      throw mapProviderError(error);
     }
-
-    const details = statusFromProviderError(error);
-
-    console.error("[Gemini provider error]", {
-      model: GEMINI_MODEL,
-      status: details.status,
-      code: details.code,
-      message: error instanceof Error ? error.message : String(error),
-    });
-
-    throw mapProviderError(error);
-  }
 }
