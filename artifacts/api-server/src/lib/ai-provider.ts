@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { createHash } from "node:crypto";
 
-export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 export const AI_REQUEST_TIMEOUT_MS = 90_000;
 export const MAX_GENERATION_PROMPT_CHARS = 12_000;
 export const MAX_GENERATION_OUTPUT_TOKENS = 1_200;
@@ -224,20 +224,20 @@ export async function generateDraft(input: {
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
       contents: input.prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        maxOutputTokens: MAX_GENERATION_OUTPUT_TOKENS,
-        abortSignal: input.signal,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            body: { type: Type.STRING },
-          },
-          required: ["title", "body"],
+    config: {
+      systemInstruction: SYSTEM_INSTRUCTION,
+      maxOutputTokens: MAX_GENERATION_OUTPUT_TOKENS,
+      abortSignal: input.signal,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          body: { type: Type.STRING },
         },
+        required: ["title", "body"],
       },
+    },
     });
     return parseGeneratedDraft(response.text);
 } catch (error) {
