@@ -381,18 +381,77 @@ function BrandEditor({ brand, onClose, onSave, pending }: { brand: Brand | null;
 function Pricing() {
   const plans = useListPlans({ query: { queryKey: getListPlansQueryKey() } });
   const usage = useGetUsage({ query: { queryKey: getGetUsageQueryKey() } });
+  const { getToken } = useAuth();
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState('');
+
+  async function handleUpgrade(planId: 'starter' | 'pro') {
+    setCheckoutLoading(planId);
+    setCheckoutError('');
+
+    try {
+      const email = window.prompt('Enter your email address for Paystack:')?.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setCheckoutError('Please enter a valid email address.');
+        return;
+      }
+
+      if (!apiBaseUrl) {
+        throw new Error('The API URL is not configured. Set VITE_API_BASE_URL in your frontend deployment.');
+      }
+
+      // This app's API client uses Clerk bearer tokens for cross-origin API requests.
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Your session could not be verified. Please sign in again and retry.');
+      }
+
+      const response = await fetch(`${apiBaseUrl}/api/billing/initialize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ planId, email }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(typeof result.error === 'string' ? result.error : 'Unable to initialize payment.');
+      }
+
+      if (
+        typeof result.authorizationUrl !== 'string' ||
+        !result.authorizationUrl.startsWith('https://checkout.paystack.com/')
+      ) {
+        throw new Error('Paystack returned an invalid checkout URL.');
+      }
+
+      window.location.assign(result.authorizationUrl);
+    } catch (error) {
+      setCheckoutError(
+        error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+      );
+    } finally {
+      setCheckoutLoading(null);
+    }
+  }
+
   if (plans.isLoading) return <Page title="Plans" subtitle="A clear view of what each workspace plan includes."><LoadingBlock text="Loading plan details" /></Page>;
   if (plans.isError) return <Page title="Plans" subtitle="A clear view of what each workspace plan includes."><ErrorBlock retry={() => void plans.refetch()} /></Page>;
-  return <Page title="Plans" subtitle="Compare what is included. Billing and plan changes are currently on hold.">
+  return <Page title="Plans" subtitle="Compare what is included in each workspace plan.">
     {usage.isError && <ErrorBlock message="Your current usage could not be loaded." retry={() => void usage.refetch()} />}
     {usage.data && <section className="plan-current surface"><div><p className="eyebrow">YOUR CURRENT PLAN</p><h2 className="font-display">{usage.data.planName}</h2><p>{usage.data.used} of {usage.data.limit} successful AI generations used · {usage.data.remaining} remaining · resets {formatUtcDate(usage.data.periodEnd)} UTC</p><p>{usage.data.brandCount} of {usage.data.brandLimit} brand profiles used</p></div><span className="plan-status">{label(usage.data.subscriptionStatus)}</span></section>}
     {usage.isLoading && <LoadingBlock text="Loading your current usage" />}
     {plans.data?.length ? <div className="plans-list">{plans.data.map((plan, index) => {
       const current = usage.data?.plan === plan.id;
       const isPaid = plan.monthlyPriceNgn > 0;
-      return <article className={`plan-card surface ${index === 1 ? 'plan-featured' : ''}`} key={plan.id} data-testid={`card-plan-${plan.id}`}><div className="plan-head"><div><p className="eyebrow">{index === 0 ? 'A PRACTICAL START' : index === 1 ? 'MORE ROOM TO GROW' : 'FOR BUSIER DESKS'}</p><h2 className="font-display">{plan.name}</h2></div><span className="plan-price">{plan.monthlyPriceNgn === 0 ? '₦0' : `₦${plan.monthlyPriceNgn.toLocaleString()}`}<small>{isPaid ? 'planned / month' : 'forever'}</small>{isPaid && <small>Coming Soon</small>}</span></div><p className="plan-volume">{plan.generationLimit} successful AI generations / UTC month · {plan.brandLimit} {plan.brandLimit === 1 ? 'brand' : 'brands'}</p><ul>{plan.features.map(feature => <li key={feature}><Check size={15} />{feature}</li>)}</ul><div className="plan-detail"><span>CALENDAR</span><p>{plan.calendarDescription}</p></div><div className="plan-detail"><span>EXPORTS</span><p>{plan.exportDescription}</p></div><div className="plan-unavailable" data-testid={`text-plan-availability-${plan.id}`}><strong>{current ? 'Current plan' : isPaid ? 'Coming Soon' : 'Free Forever'}</strong><small>{current ? `Resets ${formatUtcDate(usage.data?.periodEnd ?? null)} UTC` : isPaid ? 'Plan activation is unavailable; billing is not enabled.' : 'Default for new workspaces'}</small></div></article>;
+      const paidPlanId = plan.id === 'starter' || plan.id === 'pro' ? plan.id : null;
+      return <article className={`plan-card surface ${index === 1 ? 'plan-featured' : ''}`} key={plan.id} data-testid={`card-plan-${plan.id}`}><div className="plan-head"><div><p className="eyebrow">{index === 0 ? 'A PRACTICAL START' : index === 1 ? 'MORE ROOM TO GROW' : 'FOR BUSIER DESKS'}</p><h2 className="font-display">{plan.name}</h2></div><span className="plan-price">{plan.monthlyPriceNgn === 0 ? '₦0' : `₦${plan.monthlyPriceNgn.toLocaleString()}`}<small>{isPaid ? '/ month' : 'forever'}</small></span></div><p className="plan-volume">{plan.generationLimit} successful AI generations / UTC month · {plan.brandLimit} {plan.brandLimit === 1 ? 'brand' : 'brands'}</p><ul>{plan.features.map(feature => <li key={feature}><Check size={15} />{feature}</li>)}</ul><div className="plan-detail"><span>CALENDAR</span><p>{plan.calendarDescription}</p></div><div className="plan-detail"><span>EXPORTS</span><p>{plan.exportDescription}</p></div><div className="plan-unavailable" data-testid={`text-plan-availability-${plan.id}`}><strong>{current ? 'Current plan' : isPaid ? 'Paid plan' : 'Free Forever'}</strong><small>{current ? `Resets ${formatUtcDate(usage.data?.periodEnd ?? null)} UTC` : isPaid ? 'Secure payments powered by Paystack.' : 'Default for new workspaces'}</small></div>{isPaid && paidPlanId && !current && <Button onClick={() => void handleUpgrade(paidPlanId)} disabled={checkoutLoading !== null} testId={`button-upgrade-${paidPlanId}`}>{checkoutLoading === paidPlanId ? <><LoaderCircle size={15} className="spin" /> Connecting to Paystack…</> : `Upgrade to ${paidPlanId === 'starter' ? 'Starter · ₦3,000/month' : 'Pro · ₦7,000/month'}`}</Button>}</article>;
     })}</div> : <div className="surface page-empty"><Empty title="Plan details are not available yet" detail="Please check back later for current plan information." /></div>}
-    <p className="plans-note">Paid plans cannot be activated until billing is implemented. No checkout or plan-change flow is available.</p>
+    {checkoutError && <p className="form-error text-sm text-red-600" role="alert" data-testid="status-checkout-error">{checkoutError}</p>}
+    <p className="plans-note">Secure payments powered by Paystack.</p>
   </Page>;
 }
 

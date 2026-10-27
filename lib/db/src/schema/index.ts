@@ -22,3 +22,4 @@ export * from "./brands";
 export * from "./contents";
 export * from "./usage";
 export * from "./generation-requests";
+export * from "./payments";

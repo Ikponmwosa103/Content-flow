@@ -33,9 +33,9 @@ export const PLAN_OPTIONS = [
     },
     calendarDescription: "Full content calendar",
     exportDescription: "Full available export functionality",
-    availableForUpgrade: false,
+    availableForUpgrade: true,
     features: [
-      "Planned ₦3,000/month · Coming Soon",
+      "₦3,000/month",
       "100 successful AI generations per UTC calendar month",
       "Maximum 3 brand profiles",
       "Full content calendar",
@@ -54,9 +54,9 @@ export const PLAN_OPTIONS = [
     },
     calendarDescription: "Full content calendar",
     exportDescription: "Full available export functionality",
-    availableForUpgrade: false,
+    availableForUpgrade: true,
     features: [
-      "Planned ₦7,000/month · Coming Soon",
+      "₦7,000/month",
       "300 successful AI generations per UTC calendar month",
       "Maximum 10 brand profiles",
       "Full content calendar",
@@ -71,9 +71,11 @@ export type PlanFeatureLevel = "basic" | "full";
 
 export function getPlanOption(planId: string) {
   const plan = PLAN_OPTIONS.find((option) => option.id === planId);
+
   if (!plan) {
     throw new Error(`Unsupported ContentFlow plan: ${planId}`);
   }
+
   return plan;
 }
 
