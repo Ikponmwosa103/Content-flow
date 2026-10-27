@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { createHash } from "node:crypto";
 
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-export const AI_REQUEST_TIMEOUT_MS = 45_000;
+export const AI_REQUEST_TIMEOUT_MS = 90_000;
 export const MAX_GENERATION_PROMPT_CHARS = 12_000;
 export const MAX_GENERATION_OUTPUT_TOKENS = 1_200;
 export const MAX_GENERATED_TITLE_CHARS = 160;
