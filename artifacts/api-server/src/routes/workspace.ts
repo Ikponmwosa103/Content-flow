@@ -91,6 +91,7 @@ router.post("/workspace", async (req, res): Promise<void> => {
       name: parsed.data.name.trim(),
       plan: "free",
       subscriptionStatus: "free",
+      subscriptionStartedAt: null,
       planRenewalAt: null,
     })
     .onConflictDoNothing({ target: workspacesTable.ownerId })

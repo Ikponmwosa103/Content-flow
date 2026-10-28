@@ -346,6 +346,11 @@ router.post("/generate", async (req, res): Promise<void> => {
       requestId: input.requestId,
       requestHash: fingerprintGenerationPrompt(prompt),
       plan: getPlanForWorkspace(workspace.plan),
+      periodAnchor: workspace.plan === "free"
+        ? workspace.createdAt
+        : workspace.subscriptionStartedAt ?? (workspace.planRenewalAt
+          ? new Date(workspace.planRenewalAt.getTime() - 30 * 24 * 60 * 60 * 1000)
+          : workspace.createdAt),
     });
   } catch (err) {
     req.log.error(
