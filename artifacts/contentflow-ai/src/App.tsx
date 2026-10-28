@@ -518,7 +518,7 @@ function Pricing() {
         'Enter your email address for Paystack:',
       )?.trim();
 
-      if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setCheckoutError('Please enter a valid email address.');
         return;
       }
