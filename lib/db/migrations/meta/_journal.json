@@ -15,13 +15,6 @@
       "when": 1793099712018,
       "tag": "0001_sloppy_spencer_smythe",
       "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1793140000000,
-      "tag": "0002_subscription_anniversary",
-      "breakpoints": true
     }
   ]
 }

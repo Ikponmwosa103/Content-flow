@@ -51,14 +51,13 @@ app.use(
 // CORS must run before this route so a Netlify-hosted Clerk client can use the
 // API's Clerk proxy endpoint when VITE_CLERK_PROXY_URL is configured.
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-// Capture the exact request bytes in the same parser that decodes JSON. A
-// second JSON parser cannot reliably capture raw bytes after the first consumes
-// the stream, which would break Paystack signature verification.
+app.use(express.json({ limit: "32kb" }));
 app.use(
   express.json({
     limit: "32kb",
     verify: (req, _res, buffer) => {
-      (req as typeof req & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
+      (req as typeof req & { rawBody?: Buffer }).rawBody =
+        Buffer.from(buffer);
     },
   }),
 );

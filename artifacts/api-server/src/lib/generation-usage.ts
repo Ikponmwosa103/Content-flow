@@ -156,12 +156,10 @@ export async function reserveGeneration(input: {
   requestId: string;
   requestHash: string;
   plan: PlanOption;
-  periodAnchor?: Date;
   now?: Date;
 }): Promise<ReservationResult> {
   const now = input.now ?? new Date();
-  const periodAnchor = input.periodAnchor ?? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const periodStart = currentPeriodStart(periodAnchor, now);
+  const periodStart = currentPeriodStart(now);
 
   return db.transaction(async (tx) => {
     await lockWorkspaceGeneration(tx, input.workspaceId);

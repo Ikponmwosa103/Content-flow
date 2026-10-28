@@ -48,18 +48,10 @@ export async function findBrandForWorkspace(
 export async function getUsageSummary(
   workspace: Pick<
     Workspace,
-    "id" | "plan" | "subscriptionStatus" | "planRenewalAt" | "subscriptionStartedAt" | "createdAt"
+    "id" | "plan" | "subscriptionStatus" | "planRenewalAt"
   >,
 ) {
-  const now = new Date();
-  // Older paid workspaces may not have a recorded start date. Prefer the
-  // known renewal date minus one billing month, then fall back to creation.
-  const anchor = workspace.plan === "free"
-    ? workspace.createdAt
-    : workspace.subscriptionStartedAt ?? (workspace.planRenewalAt
-      ? new Date(workspace.planRenewalAt.getTime() - 30 * 24 * 60 * 60 * 1000)
-      : workspace.createdAt);
-  const periodStart = currentPeriodStart(anchor, now);
+  const periodStart = currentPeriodStart();
   const plan = getPlanForWorkspace(workspace.plan);
   const [usageRows, brandRows] = await Promise.all([
     db
@@ -93,7 +85,7 @@ export async function getUsageSummary(
     subscriptionStatus,
     renewalDate: workspace.planRenewalAt,
     periodStart,
-    periodEnd: currentPeriodEnd(anchor, now),
+    periodEnd: currentPeriodEnd(),
     limit: plan.generationLimit,
     used,
     remaining: Math.max(0, plan.generationLimit - used),

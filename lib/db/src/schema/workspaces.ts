@@ -8,7 +8,6 @@ export const workspacesTable = pgTable("contentflow_workspaces", {
   name: text("name").notNull(),
   plan: text("plan").notNull().default("free"),
   subscriptionStatus: text("subscription_status").notNull().default("free"),
-  subscriptionStartedAt: timestamp("subscription_started_at", { withTimezone: true }),
   planRenewalAt: timestamp("plan_renewal_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
