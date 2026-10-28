@@ -1,11 +1,14 @@
-import { eq } from "drizzle-orm";
+
 import { randomUUID } from "node:crypto";
 
 type DatabaseModule = typeof import("@workspace/db");
 
 export async function loadTestDatabase(): Promise<DatabaseModule | null> {
   const testDatabaseUrl = process.env.CONTENTFLOW_TEST_DATABASE_URL;
-  if (!testDatabaseUrl) return null;
+
+  if (!testDatabaseUrl) {
+    return null;
+  }
 
   if (
     process.env.DATABASE_URL &&
@@ -15,7 +18,9 @@ export async function loadTestDatabase(): Promise<DatabaseModule | null> {
       "CONTENTFLOW_TEST_DATABASE_URL must point to a separate test database",
     );
   }
+
   process.env.DATABASE_URL = testDatabaseUrl;
+
   return import("@workspace/db");
 }
 
@@ -24,6 +29,7 @@ export async function createTestWorkspace(
   plan: string,
 ) {
   const ownerId = `contentflow-test-${randomUUID()}`;
+
   const [workspace] = await database.db
     .insert(database.workspacesTable)
     .values({
@@ -38,7 +44,10 @@ export async function createTestWorkspace(
   return {
     id: workspace.id,
     ownerId,
+
     async cleanup() {
+      const { eq } = await import("@workspace/db");
+
       await database.db
         .delete(database.workspacesTable)
         .where(eq(database.workspacesTable.ownerId, ownerId));

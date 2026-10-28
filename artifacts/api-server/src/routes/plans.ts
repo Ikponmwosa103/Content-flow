@@ -1,8 +1,8 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { ListPlansResponse } from "@workspace/api-zod";
 import { PLAN_OPTIONS } from "../lib/plans";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.get("/plans", (_req, res): void => {
   res.json(ListPlansResponse.parse(PLAN_OPTIONS));

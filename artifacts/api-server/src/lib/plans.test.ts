@@ -43,9 +43,9 @@ test("central plan configuration contains the requested limits and feature level
     calendar: "full",
     export: "full",
   });
-  assert.equal(PLAN_OPTIONS[0].availableForUpgrade, false);
-  assert.equal(PLAN_OPTIONS[1].availableForUpgrade, false);
-  assert.equal(PLAN_OPTIONS[2].availableForUpgrade, false);
+    assert.equal(PLAN_OPTIONS[0].availableForUpgrade, false);
+    assert.equal(PLAN_OPTIONS[1].availableForUpgrade, true);
+    assert.equal(PLAN_OPTIONS[2].availableForUpgrade, true);
 });
 
 test("unknown persisted plan IDs fail closed to Free Forever", () => {

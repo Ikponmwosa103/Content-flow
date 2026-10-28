@@ -5,8 +5,8 @@ import {
   ilike,
   lt,
   or,
-} from "drizzle-orm";
-import { Router, type IRouter } from "express";
+} from "@workspace/db";
+import { Router } from "express";
 import {
   CreateContentBody,
   CreateContentResponse,
@@ -55,7 +55,7 @@ import {
   serializeGenerationPrompt,
 } from "../lib/ai-provider";
 
-const router: IRouter = Router();
+const router = Router();
 router.use(requireAuth);
 
 router.get("/contents", async (req, res): Promise<void> => {
@@ -346,6 +346,11 @@ router.post("/generate", async (req, res): Promise<void> => {
       requestId: input.requestId,
       requestHash: fingerprintGenerationPrompt(prompt),
       plan: getPlanForWorkspace(workspace.plan),
+      periodAnchor: workspace.plan === "free"
+        ? workspace.createdAt
+        : workspace.subscriptionStartedAt ?? (workspace.planRenewalAt
+          ? new Date(workspace.planRenewalAt.getTime() - 30 * 24 * 60 * 60 * 1000)
+          : workspace.createdAt),
     });
   } catch (err) {
     req.log.error(

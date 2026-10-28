@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { count, eq } from "@workspace/db";
 import { brandsTable, db, workspacesTable } from "@workspace/db";
 import type { InsertBrand } from "@workspace/db";
 import { getPlanForWorkspace } from "./plans";

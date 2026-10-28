@@ -1,11 +1,12 @@
-import { Router, type IRouter, type Request } from "express";
+import { Router, type Request } from "express";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { and, eq } from "drizzle-orm";
-import { db, paymentsTable, workspacesTable } from "@workspace/db";
+import { and, eq, sql } from "@workspace/db";
+import { db, generationRequestsTable, paymentsTable, usageTable, workspacesTable } from "@workspace/db";
 import { requireAuth, getAuthenticatedUserId } from "../middlewares/requireAuth";
 import { PLAN_OPTIONS } from "../lib/plans";
+import { monthlyAnniversary } from "../lib/usage-period";
 
-const router: IRouter = Router();
+const router = Router();
 
 const PAYSTACK_API = "https://api.paystack.co";
 
@@ -255,24 +256,65 @@ async function verifyAndActivate(reference: string): Promise<boolean> {
   if (Number.isNaN(paidAt.getTime())) return false;
 
   // Keep the payment and workspace update in one database transaction.
-  await db.transaction(async (tx) => {
+  const activated = await db.transaction(async (tx) => {
+    // Lock the payment row so concurrent browser callbacks/webhooks serialize.
     const [currentPayment] = await tx
       .select()
       .from(paymentsTable)
       .where(eq(paymentsTable.reference, reference))
+      .for("update")
       .limit(1);
 
-    if (!currentPayment || currentPayment.status === "success") return;
+    if (!currentPayment) return false;
+    // A successful reference is idempotent: never reapply plan/usage resets.
+    if (currentPayment.status === "success") return true;
+    if (currentPayment.status !== "pending") return false;
 
-    if (currentPayment.status !== "pending") return;
+    const [workspace] = await tx
+      .select({ id: workspacesTable.id })
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, currentPayment.workspaceId))
+      .for("update")
+      .limit(1);
+    if (!workspace) return false;
+    // Share the generation subsystem's advisory lock so activation cannot race
+    // a reservation or successful completion for this workspace.
+    await tx.execute(sql`select pg_advisory_xact_lock(44110, ${currentPayment.workspaceId})`);
 
-    await tx
+    const [markedPaid] = await tx
       .update(paymentsTable)
-      .set({ status: "success", paidAt })
+      .set({ status: "success", paidAt, updatedAt: new Date() })
       .where(
         and(
           eq(paymentsTable.reference, reference),
           eq(paymentsTable.status, "pending"),
+        ),
+      )
+      .returning({ id: paymentsTable.id });
+    if (!markedPaid) return false;
+
+    // If a plan is activated on a date that already has a usage row (for
+    // example Free -> Starter on the registration anniversary), reuse that
+    // date-keyed row but clear its counters. Fail in-flight requests from the
+    // old allowance so a late AI response cannot consume the new plan quota.
+    const activationPeriodStart = paidAt.toISOString().slice(0, 10);
+    await tx
+      .update(generationRequestsTable)
+      .set({ status: "failed", response: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(generationRequestsTable.workspaceId, currentPayment.workspaceId),
+          eq(generationRequestsTable.periodStart, activationPeriodStart),
+          eq(generationRequestsTable.status, "pending"),
+        ),
+      );
+    await tx
+      .update(usageTable)
+      .set({ generationCount: 0, reservedCount: 0, updatedAt: new Date() })
+      .where(
+        and(
+          eq(usageTable.workspaceId, currentPayment.workspaceId),
+          eq(usageTable.periodStart, activationPeriodStart),
         ),
       );
 
@@ -281,14 +323,16 @@ async function verifyAndActivate(reference: string): Promise<boolean> {
       .set({
         plan: currentPayment.planId,
         subscriptionStatus: "active",
-        planRenewalAt: new Date(
-          paidAt.getTime() + 30 * 24 * 60 * 60 * 1000,
-        ),
+        subscriptionStartedAt: paidAt,
+        planRenewalAt: monthlyAnniversary(paidAt, 1),
+        updatedAt: new Date(),
       })
       .where(eq(workspacesTable.id, currentPayment.workspaceId));
+
+    return true;
   });
 
-  return true;
+  return activated;
 }
 
 /**

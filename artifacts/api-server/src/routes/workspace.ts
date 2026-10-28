@@ -1,5 +1,5 @@
-import { and, asc, eq } from "drizzle-orm";
-import { Router, type IRouter } from "express";
+import { and, asc, eq } from "@workspace/db";
+import { Router } from "express";
 import {
   CreateBrandBody,
   CreateBrandResponse,
@@ -22,7 +22,7 @@ import {
 import { findWorkspaceForUser } from "../lib/contentflow";
 import { createBrandWithinPlanLimit } from "../lib/brand-limits";
 
-const router: IRouter = Router();
+const router = Router();
 router.use(requireAuth);
 
 router.get("/workspace", async (_req, res): Promise<void> => {
@@ -91,12 +91,21 @@ router.post("/workspace", async (req, res): Promise<void> => {
       name: parsed.data.name.trim(),
       plan: "free",
       subscriptionStatus: "free",
+      subscriptionStartedAt: null,
       planRenewalAt: null,
     })
     .onConflictDoNothing({ target: workspacesTable.ownerId })
     .returning();
+  // Make workspace creation safe to retry. A previous request may have
+  // committed successfully even if the browser lost the response. In that
+  // case return the owner's existing workspace instead of failing with 409.
   if (!workspace) {
-    res.status(409).json({ error: "A workspace already exists" });
+    const existing = await findWorkspaceForUser(userId);
+    if (existing) {
+      res.status(200).json(CreateWorkspaceResponse.parse(existing));
+      return;
+    }
+    res.status(409).json({ error: "A workspace could not be created. Please retry." });
     return;
   }
   res.status(201).json(CreateWorkspaceResponse.parse(workspace));

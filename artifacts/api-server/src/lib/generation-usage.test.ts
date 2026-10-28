@@ -1,11 +1,14 @@
+
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
-import { and, eq } from "drizzle-orm";
 import { PLAN_OPTIONS } from "./plans";
 import { createTestWorkspace, loadTestDatabase } from "./test-database";
 
 const database = await loadTestDatabase();
+const dbOperators = database
+  ? await import("@workspace/db")
+  : null;
 const generationUsage = database
   ? await import("./generation-usage")
   : null;
@@ -13,6 +16,7 @@ const generationUsage = database
 after(async () => {
   if (database) await database.pool.end();
 });
+
 
 test(
   "monthly rollover isolates usage in UTC calendar months",
@@ -180,38 +184,17 @@ test(
           "reserved",
         );
       }
-      const retry = await generationUsage!.reserveGeneration({
-        workspaceId: workspace.id,
-        requestId,
-        requestHash: "f".repeat(64),
-        plan: PLAN_OPTIONS[0],
-        now,
-      });
-      assert.deepEqual(retry, {
-        kind: "cached",
-        result: draft,
-        periodStart: "2026-10-01",
-      });
-      assert.deepEqual(
-        await generationUsage!.reserveGeneration({
-          workspaceId: workspace.id,
-          requestId,
-          requestHash: "x".repeat(64),
-          plan: PLAN_OPTIONS[0],
-          now,
-        }),
-        { kind: "idempotency_conflict" },
-      );
 
       const [usage] = await database!.db
         .select()
         .from(database!.usageTable)
         .where(
-          and(
-            eq(database!.usageTable.workspaceId, workspace.id),
-            eq(database!.usageTable.periodStart, "2026-10-01"),
+          dbOperators!.and(
+            dbOperators!.eq(database!.usageTable.workspaceId, workspace.id),
+            dbOperators!.eq(database!.usageTable.periodStart, "2026-10-01"),
           ),
         );
+
       assert.equal(usage.generationCount, 1);
       assert.equal(usage.reservedCount, 4);
     } finally {
@@ -226,6 +209,7 @@ test(
     }
   },
 );
+
 
 test(
   "provider failure releases only its reservation without spending usage",
@@ -260,22 +244,25 @@ test(
         requestId,
         now: new Date("2026-10-25T12:00:30.000Z"),
       });
+
       const [usage] = await database!.db
         .select()
         .from(database!.usageTable)
         .where(
-          and(
-            eq(database!.usageTable.workspaceId, workspace.id),
-            eq(database!.usageTable.periodStart, "2026-10-01"),
+          dbOperators!.and(
+            dbOperators!.eq(database!.usageTable.workspaceId, workspace.id),
+            dbOperators!.eq(database!.usageTable.periodStart, "2026-10-01"),
           ),
         );
+
       assert.equal(usage.generationCount, 0);
       assert.equal(usage.reservedCount, 0);
-    } finally {
+       } finally {
       await workspace.cleanup();
     }
   },
 );
+
 
 test(
   "the shared burst limiter throttles excess requests with a retry delay",

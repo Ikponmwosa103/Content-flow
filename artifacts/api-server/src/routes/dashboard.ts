@@ -1,5 +1,5 @@
-import { and, count, eq, gte } from "drizzle-orm";
-import { Router, type IRouter } from "express";
+import { and, count, eq, gte } from "@workspace/db";
+import { Router } from "express";
 import {
   GetDashboardResponse,
   GetUsageResponse,
@@ -15,7 +15,7 @@ import {
   getUsageSummary,
 } from "../lib/contentflow";
 
-const router: IRouter = Router();
+const router = Router();
 router.use(requireAuth);
 
 router.get("/usage", async (_req, res): Promise<void> => {

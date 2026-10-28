@@ -7,9 +7,9 @@ import {
   inArray,
   lt,
   sql,
-} from "drizzle-orm";
-import type { ExtractTablesWithRelations } from "drizzle-orm";
-import type { NodePgTransaction } from "drizzle-orm/node-postgres";
+} from "@workspace/db";
+import type { ExtractTablesWithRelations } from "@workspace/db";
+import type { NodePgTransaction } from "@workspace/db";
 import {
   db,
   generationAttemptsTable,
@@ -156,10 +156,12 @@ export async function reserveGeneration(input: {
   requestId: string;
   requestHash: string;
   plan: PlanOption;
+  periodAnchor?: Date;
   now?: Date;
 }): Promise<ReservationResult> {
   const now = input.now ?? new Date();
-  const periodStart = currentPeriodStart(now);
+  const periodAnchor = input.periodAnchor ?? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const periodStart = currentPeriodStart(periodAnchor, now);
 
   return db.transaction(async (tx) => {
     await lockWorkspaceGeneration(tx, input.workspaceId);
