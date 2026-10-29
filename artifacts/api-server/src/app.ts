@@ -1,3 +1,4 @@
+
 import express, { type Express } from "express";
 import cors from "cors";
 import { clerkMiddleware } from "@clerk/express";
@@ -33,7 +34,9 @@ app.use(
     },
   }),
 );
+
 const allowedCorsOrigins = getAllowedCorsOrigins();
+
 app.use(
   cors((req, callback) => {
     const origin = req.header("Origin");
@@ -42,16 +45,19 @@ app.use(
       req.header("host"),
       allowedCorsOrigins,
     );
+
     callback(null, {
       credentials: true,
       origin: origin && allowed ? origin : false,
     });
   }),
 );
-// CORS must run before this route so a Netlify-hosted Clerk client can use the
-// API's Clerk proxy endpoint when VITE_CLERK_PROXY_URL is configured.
+
+// Keep the Clerk proxy available to the frontend.
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-app.use(express.json({ limit: "32kb" }));
+
+// Parse JSON once and preserve the exact request body for Paystack
+// webhook signature verification.
 app.use(
   express.json({
     limit: "32kb",
@@ -61,6 +67,8 @@ app.use(
     },
   }),
 );
+
+// Initialize Clerk middleware for API requests.
 app.use(
   clerkMiddleware((req) => ({
     publishableKey: publishableKeyFromHost(
