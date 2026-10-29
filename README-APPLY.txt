@@ -1,22 +1,22 @@
-# ContentFlow UI / Mobile Responsiveness Patch
+CONTENTFLOW NEON DASHBOARD DESIGN PATCH
 
-## Included
-- `artifacts/contentflow-ai/src/contentflow.css`
+This patch restyles the existing workspace toward the supplied reference:
+- midnight navy background and dark glass panels
+- teal/cyan accent colors and active navigation glow
+- softer rounded cards, subtle borders and shadows
+- brighter dashboard text and more visible controls
+- responsive mobile adjustments
 
-This is a focused drop-in replacement for the shared ContentFlow stylesheet. It keeps the existing page components and adds a global readability/contrast pass plus responsive refinements for landing, authentication, dashboard, content creation, library, calendar, brand management, onboarding, and dialogs.
+FILES
+- artifacts/contentflow-ai/src/contentflow.css
+- artifacts/contentflow-ai/public/favicon.svg
 
-## Apply
-1. Make a backup of your current `artifacts/contentflow-ai/src/contentflow.css`.
-2. Extract this ZIP into the root of your ContentFlow repository, preserving folder paths and allowing the file to replace the existing stylesheet.
-3. Run the project's usual checks (`pnpm --filter contentflow-ai typecheck` if that script exists, then the frontend build).
-4. Test at approximately 360px, 390px, 768px, 1024px, and desktop widths before deploying.
+APPLY
+1. Back up your current files.
+2. Copy the included contentflow.css over your project's src/contentflow.css.
+3. Copy favicon.svg into your project's public/favicon.svg if you want the matching tab icon.
+4. Commit and push to GitHub, then wait for Netlify to redeploy.
+5. Hard refresh with Ctrl+Shift+R.
 
-This patch only changes presentation styles. It does not modify payment, authentication, API, or database code.
-
-
-V2 polish included:
-- Softer, more consistent corner radii for common controls, cards, panels, chips, and dialogs.
-- Lighter default borders with clearer hover/focus states.
-- Subtle card hover lift and button press feedback.
-- Gentle page/dialog entrance motion with reduced-motion support.
-- No changes to application logic, API calls, authentication, or billing.
+This is a CSS patch, not a full project archive. It preserves existing app logic and does not change API, payments, authentication, or database code.
+The theme uses existing class names where possible; because the site has not been run in a browser here, some component-specific elements may need selector adjustments.
