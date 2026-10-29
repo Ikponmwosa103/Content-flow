@@ -137,3 +137,69 @@ body, .app-frame { background: #f7f7f4; color: #252d39; }
   .create-mode-tabs { display: flex; width: 100%; }
   .create-mode-tab { flex: 1; padding-inline: 8px; }
 }
+
+
+/* Responsive authentication layout: prevent Clerk cards and hero copy from overflowing narrow screens. */
+.auth-page {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+}
+.auth-card, .auth-card > *, .auth-page > * { min-width: 0; }
+.auth-card { width: 100%; max-width: 440px; justify-self: center; }
+.auth-page .cl-rootBox,
+.auth-page .cl-cardBox,
+.auth-page .cl-card,
+.auth-page .cl-footer,
+.auth-page .cl-main,
+.auth-page .cl-header {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 22px;
+    min-height: 100dvh;
+    padding: 92px 16px 76px;
+    overflow-x: clip;
+  }
+  .auth-logo { left: 18px; top: 20px; }
+  .auth-intro {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .auth-intro h1 {
+    font-size: clamp(32px, 8vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -1.8px;
+    overflow-wrap: anywhere;
+  }
+  .auth-intro > p:last-child { margin-inline: auto; }
+  .auth-card { width: 100%; max-width: 440px; margin: 0 auto; }
+  .auth-footer {
+    position: static;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 24px;
+    text-align: center;
+  }
+  .auth-page .cl-rootBox,
+  .auth-page .cl-cardBox,
+  .auth-page .cl-card,
+  .auth-page .cl-footer,
+  .auth-page .cl-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+@media (max-width: 380px) {
+  .auth-page { padding-inline: 12px; }
+  .auth-intro h1 { font-size: 30px; }
+  .auth-page .cl-cardBox { padding-inline: 12px; }
+}
