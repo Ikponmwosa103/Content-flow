@@ -60,12 +60,6 @@ function apiErrorMessage(error: unknown, fallback: string) {
       return data.error;
     }
   }
-  if (error instanceof TypeError && /fetch|network|load failed/i.test(error.message)) {
-    return 'Cannot reach ContentFlow’s API. Check VITE_API_BASE_URL in Netlify, the API service status, and CORS_ALLOWED_ORIGINS on the API.';
-  }
-  if (error instanceof Error && /401|unauthorized/i.test(error.message)) {
-    return 'Your sign-in session could not be verified. Refresh the page and sign in again.';
-  }
   return error instanceof Error && !error.message.startsWith('HTTP ') ? error.message : fallback;
 }
 
@@ -265,10 +259,7 @@ function Onboarding() {
       qc.setQueryData(getGetWorkspaceQueryKey(), workspace);
       await createBrand.mutateAsync({ data: { name: brandName.trim(), industry, website: website || null, brandVoice: voice, targetAudience: audience, contentPillars: pillars.split(',').map(x => x.trim()).filter(Boolean) } });
       await Promise.all([qc.invalidateQueries({ queryKey: getGetWorkspaceQueryKey() }), qc.invalidateQueries({ queryKey: getListBrandsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }), qc.invalidateQueries({ queryKey: getGetUsageQueryKey() })]);
-    } catch (cause) {
-      console.error('ContentFlow onboarding setup failed:', cause);
-      setError(apiErrorMessage(cause, 'We could not save this setup. Check your connection and try again.'));
-    }
+    } catch { setError('We could not save this setup. Check your connection and try again.'); }
   };
   return <Protected><main className="onboarding-page"><Link href="/" className="auth-logo"><BrandMark /></Link><div className="onboarding-layout"><div className="onboarding-aside"><p className="eyebrow">A GOOD PLACE TO BEGIN</p><h1 className="font-display">One home.<br /><em>Your whole voice.</em></h1><p>Set up the workspace and first brand that will guide every draft from here.</p><div className="onboarding-progress"><span className="progress-active" /><span /><span /></div><small>STEP 01 <i>OF</i> 01</small></div><form className="onboarding-form surface soft-shadow" onSubmit={submit}><div className="form-heading"><span className="form-step">01</span><div><p className="eyebrow">FIRST, YOUR FOUNDATION</p><h2 className="font-display">Set the context.</h2></div></div>{!existingWorkspace.data && <Field label="Workspace name"><Input required value={workspaceName} onChange={e => setWorkspaceName(e.target.value)} placeholder="Name your workspace" maxLength={100} testId="input-workspace-name" /></Field>}<div className="form-divider"><span>{existingWorkspace.data ? 'ADD YOUR FIRST BRAND' : 'FIRST BRAND'}</span></div><Field label="Brand name"><Input required value={brandName} onChange={e => setBrandName(e.target.value)} placeholder="Name your brand" maxLength={100} testId="input-brand-name" /></Field><div className="form-two"><Field label="Industry"><Input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="e.g. Independent retail" maxLength={100} testId="input-brand-industry" /></Field><Field label="Website"><Input value={website} onChange={e => setWebsite(e.target.value)} placeholder="brand.com" maxLength={500} testId="input-brand-website" /></Field></div><Field label="Brand voice" hint="How should your brand sound?"><textarea required value={voice} onChange={e => setVoice(e.target.value)} className="input textarea" placeholder="Clear, warm, thoughtful — never overly polished." maxLength={2000} data-testid="input-brand-voice" /></Field><Field label="Who is it for?" hint="Describe the people you want to reach."><textarea required value={audience} onChange={e => setAudience(e.target.value)} className="input textarea" placeholder="Curious people looking for…" maxLength={2000} data-testid="input-target-audience" /></Field><Field label="Content pillars" hint="Add a few themes, separated by commas."><Input value={pillars} onChange={e => setPillars(e.target.value)} placeholder="Behind the scenes, practical tips, point of view" testId="input-content-pillars" /></Field>{error && <div className="form-error" role="alert" data-testid="status-onboarding-error">{error}</div>}<Button type="submit" disabled={saving || existingWorkspace.isLoading} testId="button-create-workspace">{saving ? <><LoaderCircle className="spin" size={16} /> Setting up…</> : existingWorkspace.isLoading ? 'Checking workspace…' : <>Create workspace <ArrowRight size={16} /></>}</Button></form></div></main></Protected>;
 }
@@ -404,6 +395,9 @@ function Pricing() {
   const [checkoutError, setCheckoutError] = useState('');
   const [paymentMessage, setPaymentMessage] = useState('');
   const [paymentError, setPaymentError] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState('');
+  const [cancelError, setCancelError] = useState(false);
 
   const handledReference = useRef<string | null>(null);
 
@@ -508,6 +502,45 @@ function Pricing() {
       cancelled = true;
     };
   }, [isLoaded, isSignedIn, getToken, qc]);
+
+  async function handleCancelSubscription() {
+    const confirmed = window.confirm(
+      'Cancel your recurring Paystack subscription now? If Paystack confirms cancellation, your workspace will immediately move to Free Forever and paid features will stop.',
+    );
+    if (!confirmed) return;
+
+    setCancelLoading(true);
+    setCancelMessage('');
+    setCancelError(false);
+    try {
+      if (!apiBaseUrl) throw new Error('The API URL is not configured.');
+      const token = await getToken();
+      if (!token) throw new Error('Your session expired. Please sign in again.');
+
+      const response = await fetch(`${apiBaseUrl}/api/billing/cancel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.success !== true) {
+        throw new Error(typeof result.error === 'string' ? result.error : 'Paystack could not confirm cancellation.');
+      }
+
+      setCancelMessage(typeof result.message === 'string' ? result.message : 'Subscription cancellation confirmed.');
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: getGetUsageQueryKey() }),
+        qc.invalidateQueries({ queryKey: getGetWorkspaceQueryKey() }),
+        qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+        qc.invalidateQueries({ queryKey: getListPlansQueryKey() }),
+      ]);
+    } catch (error) {
+      setCancelError(true);
+      setCancelMessage(error instanceof Error ? error.message : 'Could not cancel your subscription. Please try again.');
+    } finally {
+      setCancelLoading(false);
+    }
+  }
 
   async function handleUpgrade(planId: 'starter' | 'pro') {
     setCheckoutLoading(planId);
@@ -626,6 +659,16 @@ function Pricing() {
         </div>
       )}
 
+      {cancelMessage && (
+        <div
+          className={`inline-message ${cancelError ? '' : 'success'}`}
+          role={cancelError ? 'alert' : 'status'}
+          data-testid="status-cancellation-message"
+        >
+          {cancelMessage}
+        </div>
+      )}
+
       {usage.isError && (
         <ErrorBlock
           message="Your current usage could not be loaded."
@@ -647,9 +690,21 @@ function Pricing() {
               {usage.data.brandCount} of {usage.data.brandLimit} brand profiles used
             </p>
           </div>
-          <span className="plan-status">
-            {label(usage.data.subscriptionStatus)}
-          </span>
+          <div className="flex flex-col items-start gap-2">
+            <span className="plan-status">
+              {label(usage.data.subscriptionStatus)}
+            </span>
+            {(usage.data.plan === 'starter' || usage.data.plan === 'pro') && (
+              <Button
+                variant="danger"
+                disabled={cancelLoading}
+                onClick={() => void handleCancelSubscription()}
+                testId="button-cancel-subscription"
+              >
+                {cancelLoading ? 'Cancelling with Paystack…' : 'Cancel subscription'}
+              </Button>
+            )}
+          </div>
         </section>
       )}
 

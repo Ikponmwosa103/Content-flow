@@ -57,6 +57,10 @@ origins explicitly; do not use `*`. The API also recognizes `NETLIFY_URL` and
 | `CLERK_PUBLISHABLE_KEY` | API | Yes in production | Clerk publishable key used for server auth middleware |
 | `CLERK_SECRET_KEY` | API | Yes in production | Clerk server credential and optional Clerk proxy |
 | `GEMINI_API_KEY` | API | Yes in production | Server-side Gemini API credential; never expose as a `VITE_` variable |
+| `PAYSTACK_SECRET_KEY` | API | Yes for billing | Server-side Paystack secret; never expose it to the frontend |
+| `PAYSTACK_STARTER_PLAN_CODE` | API | Yes for recurring Starter billing | Paystack monthly NGN plan code for ₦3,000 Starter |
+| `PAYSTACK_PRO_PLAN_CODE` | API | Yes for recurring Pro billing | Paystack monthly NGN plan code for ₦7,000 Pro |
+| `PAYSTACK_CALLBACK_URL` | API | Yes for checkout | HTTPS URL to the pricing page callback, e.g. `https://content-flow-workspace.netlify.app/pricing?payment=callback` |
 | `PORT` | API | Yes | HTTP listen port assigned by the hosting platform |
 | `NODE_ENV` | API | Yes | Set to `production` for deployed API processes |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Netlify build | Yes | Public Clerk key embedded in the frontend |
@@ -74,3 +78,10 @@ origins explicitly; do not use `*`. The API also recognizes `NETLIFY_URL` and
 The root `.env.example` lists the variable names without credential values. Keep
 real keys and database URLs in the hosting provider's environment/secrets
 settings, not in source control.
+
+
+## Paystack recurring subscriptions and cancellation
+
+Create two monthly NGN plans in the Paystack dashboard: Starter at ₦3,000/month and Pro at ₦7,000/month. Add the resulting `PLN_...` plan codes to `PAYSTACK_STARTER_PLAN_CODE` and `PAYSTACK_PRO_PLAN_CODE` in the Render API environment, and set `PAYSTACK_SECRET_KEY` and `PAYSTACK_CALLBACK_URL`. Configure the Paystack webhook URL as `https://content-flow-7w1p.onrender.com/api/billing/paystack/webhook` (use your actual Render service URL) and subscribe to `charge.success`, `subscription.create`, and `subscription.disable`.
+
+Before deploying the new API, run `pnpm run db:migrate:production` against the same production `DATABASE_URL` used by Render. Deploy the backend and frontend together. New checkouts use Paystack plan codes to create recurring subscriptions. The Plans page's Cancel subscription action asks Paystack to disable the subscription and only downgrades to Free Forever after Paystack returns a confirmed success response. Existing one-time transactions do not have recurring subscription credentials; those accounts receive an explicit error and are not falsely reported as cancelled.

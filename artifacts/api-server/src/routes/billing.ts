@@ -1,12 +1,12 @@
-import { Router, type Request } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { and, eq, sql } from "@workspace/db";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db, generationRequestsTable, paymentsTable, usageTable, workspacesTable } from "@workspace/db";
 import { requireAuth, getAuthenticatedUserId } from "../middlewares/requireAuth";
 import { PLAN_OPTIONS } from "../lib/plans";
 import { monthlyAnniversary } from "../lib/usage-period";
 
-const router = Router();
+const router: IRouter = Router();
 
 const PAYSTACK_API = "https://api.paystack.co";
 
@@ -58,6 +58,14 @@ function validPlan(
   value: unknown,
 ): value is "starter" | "pro" {
   return value === "starter" || value === "pro";
+}
+
+function getPaystackPlanCode(planId: "starter" | "pro"): string | null {
+  const value = planId === "starter"
+    ? process.env.PAYSTACK_STARTER_PLAN_CODE
+    : process.env.PAYSTACK_PRO_PLAN_CODE;
+  const code = value?.trim();
+  return code && /^PLN_[A-Za-z0-9]+$/.test(code) ? code : null;
 }
 
 function validSignature(
@@ -126,6 +134,14 @@ router.post("/billing/initialize", requireAuth, async (req, res) => {
     }
 
     const secret = getPaystackSecret();
+    const paystackPlanCode = getPaystackPlanCode(planId);
+    if (!paystackPlanCode) {
+      res.status(503).json({
+        error: `Recurring billing is not configured for ${plan.name}. Set the matching Paystack plan code in the API environment.`,
+      });
+      return;
+    }
+
     const reference = `cf_${randomBytes(18).toString("hex")}`;
     const amountKobo = plan.monthlyPriceNgn * 100;
 
@@ -137,6 +153,7 @@ router.post("/billing/initialize", requireAuth, async (req, res) => {
       amountKobo,
       currency: "NGN",
       status: "pending",
+      customerEmail: email.trim().toLowerCase(),
     });
 
     const apiResponse = await fetch(`${PAYSTACK_API}/transaction/initialize`, {
@@ -150,6 +167,7 @@ router.post("/billing/initialize", requireAuth, async (req, res) => {
         amount: amountKobo,
         currency: "NGN",
         reference,
+        plan: paystackPlanCode,
         callback_url: process.env.PAYSTACK_CALLBACK_URL,
         metadata: {
           workspaceId: workspace.id,
@@ -393,6 +411,126 @@ router.get(
 );
 
 /**
+ * Immediately cancel a recurring Paystack subscription. Paid access is removed
+ * only after Paystack confirms that the subscription was disabled.
+ */
+router.post("/billing/cancel", requireAuth, async (_req, res) => {
+  try {
+    const userId = getAuthenticatedUserId(res);
+    const [workspace] = await db
+      .select()
+      .from(workspacesTable)
+      .where(eq(workspacesTable.ownerId, userId))
+      .limit(1);
+
+    if (!workspace) {
+      res.status(404).json({ error: "Workspace not found." });
+      return;
+    }
+
+    if (workspace.plan === "free" || workspace.subscriptionStatus === "free") {
+      res.status(409).json({ error: "Your workspace is already on Free Forever." });
+      return;
+    }
+
+    const [payment] = await db
+      .select()
+      .from(paymentsTable)
+      .where(and(
+        eq(paymentsTable.workspaceId, workspace.id),
+        eq(paymentsTable.planId, workspace.plan),
+        eq(paymentsTable.status, "success"),
+        sql`${paymentsTable.paystackSubscriptionCode} IS NOT NULL`,
+        sql`${paymentsTable.paystackEmailToken} IS NOT NULL`,
+        sql`${paymentsTable.subscriptionCancelledAt} IS NULL`,
+      ))
+      .orderBy(desc(paymentsTable.createdAt))
+      .limit(1);
+
+    if (!payment?.paystackSubscriptionCode || !payment.paystackEmailToken) {
+      res.status(409).json({
+        error: "We could not find a confirmed recurring Paystack subscription for this plan. No plan change was made. Please contact support to review this older payment.",
+      });
+      return;
+    }
+
+    const response = await fetch(`${PAYSTACK_API}/subscription/disable`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getPaystackSecret()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        code: payment.paystackSubscriptionCode,
+        token: payment.paystackEmailToken,
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+    const result = await response.json().catch(() => ({})) as {
+      status?: boolean;
+      message?: string;
+    };
+
+    if (!response.ok || result.status !== true) {
+      console.error("Paystack subscription cancellation was not confirmed:", result.message);
+      res.status(502).json({
+        error: "Paystack could not confirm cancellation. Your current plan has not been changed. Please try again.",
+      });
+      return;
+    }
+
+    const cancelledAt = new Date();
+    const resultAfterCancellation = await db.transaction(async (tx) => {
+      const [lockedWorkspace] = await tx
+        .select()
+        .from(workspacesTable)
+        .where(eq(workspacesTable.id, workspace.id))
+        .for("update")
+        .limit(1);
+      if (!lockedWorkspace) throw new Error("Workspace not found during cancellation.");
+
+      const [latestPayment] = await tx.select({ id: paymentsTable.id })
+        .from(paymentsTable)
+        .where(and(
+          eq(paymentsTable.workspaceId, workspace.id),
+          eq(paymentsTable.planId, payment.planId),
+          eq(paymentsTable.status, "success"),
+          sql`${paymentsTable.subscriptionCancelledAt} IS NULL`,
+        ))
+        .orderBy(desc(paymentsTable.createdAt))
+        .limit(1);
+      const downgraded = lockedWorkspace.plan === payment.planId && latestPayment?.id === payment.id;
+      if (downgraded) {
+        await tx.update(workspacesTable).set({
+          plan: "free",
+          subscriptionStatus: "free",
+          subscriptionStartedAt: null,
+          planRenewalAt: null,
+          updatedAt: cancelledAt,
+        }).where(eq(workspacesTable.id, workspace.id));
+      }
+      await tx.update(paymentsTable).set({
+        subscriptionCancelledAt: cancelledAt,
+        paystackEmailToken: null,
+        updatedAt: cancelledAt,
+      }).where(eq(paymentsTable.id, payment.id));
+      return { plan: downgraded ? "free" : lockedWorkspace.plan, downgraded };
+    });
+
+    res.json({
+      success: true,
+      plan: resultAfterCancellation.plan,
+      message: resultAfterCancellation.downgraded
+        ? "Your Paystack subscription was cancelled and your workspace is now on Free Forever."
+        : "The Paystack subscription was cancelled. A newer active plan was preserved.",
+    });
+  } catch (error) {
+    console.error("Subscription cancellation failed:", error);
+    res.status(500).json({ error: "Could not cancel the subscription. Your plan has not been changed unless Paystack already confirmed cancellation." });
+  }
+});
+
+/**
  * Paystack webhook.
  * This route expects rawBody to be captured by the JSON parser's verify hook.
  * It does not use Clerk authentication.
@@ -411,14 +549,90 @@ router.post("/billing/paystack/webhook", async (req: Request, res) => {
       return;
     }
 
-    if (req.body?.event === "charge.success") {
-      const reference = req.body?.data?.reference;
+    const event = req.body?.event;
+    const data = req.body?.data;
 
-      if (
-        typeof reference === "string" &&
-        /^cf_[a-f0-9]{36}$/.test(reference)
-      ) {
+    if (event === "charge.success") {
+      const reference = data?.reference;
+      if (typeof reference === "string" && /^cf_[a-f0-9]{36}$/.test(reference)) {
         await verifyAndActivate(reference);
+      }
+    }
+
+    if (event === "subscription.create") {
+      const subscriptionCode = data?.subscription_code;
+      const emailToken = data?.email_token;
+      const customerEmail = typeof data?.customer?.email === "string"
+        ? data.customer.email.trim().toLowerCase()
+        : null;
+      const receivedPlanCode = typeof data?.plan?.plan_code === "string"
+        ? data.plan.plan_code
+        : typeof data?.plan === "string" ? data.plan : null;
+      const starterPlanCode = getPaystackPlanCode("starter");
+      const proPlanCode = getPaystackPlanCode("pro");
+      const planId = receivedPlanCode && starterPlanCode && receivedPlanCode === starterPlanCode
+        ? "starter"
+        : receivedPlanCode && proPlanCode && receivedPlanCode === proPlanCode ? "pro" : null;
+
+      if (typeof subscriptionCode === "string" && typeof emailToken === "string" && customerEmail && planId) {
+        const [candidate] = await db.select({ id: paymentsTable.id })
+          .from(paymentsTable)
+          .where(and(
+            eq(paymentsTable.customerEmail, customerEmail),
+            eq(paymentsTable.planId, planId),
+            sql`${paymentsTable.status} IN ('pending', 'success')`,
+            sql`${paymentsTable.paystackSubscriptionCode} IS NULL`,
+          ))
+          .orderBy(desc(paymentsTable.createdAt))
+          .limit(1);
+        if (candidate) {
+          await db.update(paymentsTable).set({
+            paystackSubscriptionCode: subscriptionCode,
+            paystackEmailToken: emailToken,
+            updatedAt: new Date(),
+          }).where(eq(paymentsTable.id, candidate.id));
+        }
+      }
+    }
+
+    if (event === "subscription.disable") {
+      const subscriptionCode = data?.subscription_code;
+      if (typeof subscriptionCode === "string") {
+        const [payment] = await db.select().from(paymentsTable)
+          .where(eq(paymentsTable.paystackSubscriptionCode, subscriptionCode))
+          .limit(1);
+        if (payment) {
+          const cancelledAt = new Date();
+          await db.transaction(async (tx) => {
+            const [latestPayment] = await tx.select({ id: paymentsTable.id })
+              .from(paymentsTable)
+              .where(and(
+                eq(paymentsTable.workspaceId, payment.workspaceId),
+                eq(paymentsTable.planId, payment.planId),
+                eq(paymentsTable.status, "success"),
+                sql`${paymentsTable.subscriptionCancelledAt} IS NULL`,
+              ))
+              .orderBy(desc(paymentsTable.createdAt))
+              .limit(1);
+            await tx.update(paymentsTable).set({
+              subscriptionCancelledAt: cancelledAt,
+              paystackEmailToken: null,
+              updatedAt: cancelledAt,
+            }).where(eq(paymentsTable.id, payment.id));
+            if (latestPayment?.id === payment.id) {
+              await tx.update(workspacesTable).set({
+                plan: "free",
+                subscriptionStatus: "free",
+                subscriptionStartedAt: null,
+                planRenewalAt: null,
+                updatedAt: cancelledAt,
+              }).where(and(
+                eq(workspacesTable.id, payment.workspaceId),
+                eq(workspacesTable.plan, payment.planId),
+              ));
+            }
+          });
+        }
       }
     }
 

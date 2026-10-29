@@ -26,6 +26,10 @@ export const paymentsTable = pgTable(
     currency: text("currency").notNull().default("NGN"),
 
     status: text("status").notNull().default("pending"),
+    customerEmail: text("customer_email"),
+    paystackSubscriptionCode: text("paystack_subscription_code"),
+    paystackEmailToken: text("paystack_email_token"),
+    subscriptionCancelledAt: timestamp("subscription_cancelled_at", { withTimezone: true }),
 
     authorizationUrl: text("authorization_url"),
     accessCode: text("access_code"),
@@ -44,6 +48,9 @@ export const paymentsTable = pgTable(
     index("contentflow_payments_workspace_created_idx").on(
       table.workspaceId,
       table.createdAt,
+    ),
+    index("contentflow_payments_subscription_code_idx").on(
+      table.paystackSubscriptionCode,
     ),
   ],
 );
