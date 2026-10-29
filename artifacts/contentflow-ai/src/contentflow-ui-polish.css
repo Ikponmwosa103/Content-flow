@@ -1,0 +1,87 @@
+/* ContentFlow UI polish — calm, premium palette and cleaner dashboard hierarchy */
+:root {
+  --background: 40 30% 97%;
+  --foreground: 222 22% 17%;
+  --border: 36 17% 88%;
+  --input: 36 17% 88%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 22% 17%;
+  --card-border: 36 17% 88%;
+  --sidebar: 220 24% 16%;
+  --sidebar-foreground: 210 20% 94%;
+  --sidebar-border: 220 17% 24%;
+  --sidebar-primary: 151 25% 61%;
+  --sidebar-primary-foreground: 220 24% 16%;
+  --sidebar-accent: 220 18% 22%;
+  --sidebar-accent-foreground: 210 20% 94%;
+  --primary: 151 27% 37%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 145 15% 93%;
+  --secondary-foreground: 222 22% 17%;
+  --muted: 40 18% 94%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 151 23% 91%;
+  --accent-foreground: 151 31% 27%;
+  --ring: 151 27% 37%;
+}
+
+:root, body { color-scheme: light; }
+body, .app-frame { background: #f7f7f4; color: #252d39; }
+.sidebar { background: #202a38; color: #eef2f5; border-right: 1px solid #303a48; }
+.side-nav a, .side-nav button { transition: background .16s ease, color .16s ease; }
+.side-nav a:hover, .side-nav button:hover { background: #2a3747; }
+.side-nav a.active, .side-nav a[aria-current="page"] { background: #31463f; color: #f5faf6; box-shadow: inset 3px 0 #8db6a0; }
+.topbar { background: rgba(255,255,255,.94); border-bottom: 1px solid #e7e8e4; backdrop-filter: blur(12px); }
+.page-wrap { max-width: 1500px; margin-inline: auto; padding-top: 30px; }
+.page-heading { margin-bottom: 25px; }
+.page-heading h1 { color: #202a38; font-size: clamp(28px, 2.5vw, 36px); letter-spacing: -1.15px; font-weight: 700; }
+.page-heading p { color: #737c86; line-height: 1.6; }
+.btn { border-radius: 9px; box-shadow: none; font-weight: 650; }
+.btn-primary { background: #426b59; border-color: #426b59; color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #345846; border-color: #345846; }
+.btn-secondary { background: #fff; border-color: #dfe4df; color: #303b46; }
+.btn-secondary:hover:not(:disabled) { background: #f3f6f2; border-color: #cbd7ce; }
+.surface, .metric-card, .usage-panel, .content-panel, .upcoming-panel, .plan-card, .settings-panel { background: #fff; border: 1px solid #e5e8e3; box-shadow: 0 3px 12px rgba(30,42,36,.035); border-radius: 13px; }
+.dashboard-grid { gap: 16px; }
+.welcome-panel { background: linear-gradient(115deg,#edf3ee 0%,#e7eee9 100%); border: 1px solid #dce7df; border-radius: 14px; padding: 30px 32px; min-height: 218px; }
+.welcome-panel .eyebrow { color: #65786c; }
+.welcome-panel h2 { color: #24372d; font-size: clamp(29px,2.5vw,37px); letter-spacing: -1.3px; line-height: 1.1; }
+.welcome-panel h2 em { color: #426b59; }
+.welcome-panel p:not(.eyebrow) { color: #68786f; line-height: 1.65; font-size: 12px; }
+.welcome-link, .text-link { color: #426b59; }
+.welcome-link:hover, .text-link:hover { color: #2f5241; }
+.welcome-shape { border-color: #c5d6ca; opacity: .75; }
+.welcome-shape:before, .welcome-shape:after { border-color: #c5d6ca; }
+.welcome-shape:after { background: #d4e1d7; }
+.metric-card { min-height: 218px; padding: 17px; }
+.metric-icon { background: #edf3ee; color: #426b59; }
+.metric-card>strong { color: #25352c; font-size: 35px; }
+.metric-label { color: #46544b; }
+.metric-card small { color: #7b857d; line-height: 1.5; }
+.usage-count { color: #426b59; }
+.usage-track { background: #edf0eb; height: 7px; }
+.usage-track span { background: #729782; }
+.section-topline h3 { color: #27323e; font-size: 15px; }
+.eyebrow { color: #7a847e; letter-spacing: 1.05px; }
+.content-row { border-color: #edf0ec; padding: 13px 0; }
+.row-title { color: #2c3540; font-size: 12px; }
+.row-meta { color: #7c8580; }
+.status-draft { background: #f5f1e8; color: #82704e; }
+.status-scheduled { background: #eaf2ec; color: #426b59; }
+.platform-tag { background: #f0f3ef; color: #526257; }
+.platform-instagram, .platform-tiktok { color: #7c6557; background: #f5eee8; }
+.platform-linkedin { color: #4b6877; background: #edf2f4; }
+.platform-blog { color: #716786; background: #f1eff5; }
+.date-block { background: #f1f4ef; color: #56715f; }
+.plan-featured { border-color: #a9c3b1; box-shadow: 0 8px 22px rgba(49,84,62,.07); }
+.plan-price { color: #426b59; }
+.plan-current { background: #edf3ee; border: 1px solid #dce7df; }
+.plan-status { color: #426b59; background: #fff; }
+.icon-btn:hover { background: #f0f3ef; color: #2d4638; }
+.fade-up { animation-duration: .25s; }
+@media (max-width: 760px) {
+  .page-wrap { padding-top: 22px; }
+  .welcome-panel { padding: 23px 21px; }
+  .welcome-panel h2 { font-size: 30px; }
+  .metric-card { min-height: 145px; }
+}
