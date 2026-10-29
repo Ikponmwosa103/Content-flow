@@ -266,6 +266,7 @@ function Onboarding() {
 }
 
 function CreatePage() {
+  const [createMode, setCreateMode] = useState<'text' | 'image'>('text');
   const brands = useListBrands(); const create = useCreateContent(); const generate = useGenerateContent(); const qc = useQueryClient();
   const [brandId, setBrandId] = useState(''); const [platform, setPlatform] = useState<Platform>('instagram'); const [contentType, setContentType] = useState<ContentType>('caption');
   const [topic, setTopic] = useState(''); const [objective, setObjective] = useState(''); const [tone, setTone] = useState(''); const [cta, setCta] = useState('');
@@ -288,7 +289,11 @@ function CreatePage() {
   if (brands.isError) return <Page title="Create" subtitle="Turn a clear brief into a useful first draft."><ErrorBlock retry={() => void brands.refetch()} /></Page>;
   const brandList = brands.data ?? [];
   return <Page title="Create" subtitle="Turn a clear brief into a useful first draft.">
-    {!brandList.length ? <div className="surface page-empty"><Empty title="Start with a brand" detail="A brand voice gives every generated draft a useful point of view." action={<Link href="/brands" className="btn btn-primary" data-testid="link-create-brand">Set up a brand <ArrowRight size={15} /></Link>} /></div> :
+    <div className="create-mode-tabs" role="tablist" aria-label="Creation type">
+      <button type="button" role="tab" aria-selected={createMode === 'text'} className={`create-mode-tab ${createMode === 'text' ? 'active' : ''}`} onClick={() => setCreateMode('text')}>Text Generation</button>
+      <button type="button" role="tab" aria-selected={createMode === 'image'} className={`create-mode-tab ${createMode === 'image' ? 'active' : ''}`} onClick={() => setCreateMode('image')}>Image Generation</button>
+    </div>
+    {createMode === 'image' ? <section className="image-generation-placeholder surface" role="tabpanel"><p className="eyebrow">IMAGE STUDIO</p><h2 className="font-display">Bring your idea to life.</h2><p>The image-generation interface is being prepared. Image generation is not connected to the live API yet.</p><button type="button" className="btn btn-secondary" onClick={() => setCreateMode('text')}>Back to text generation</button></section> : !brandList.length ? <div className="surface page-empty"><Empty title="Start with a brand" detail="A brand voice gives every generated draft a useful point of view." action={<Link href="/brands" className="btn btn-primary" data-testid="link-create-brand">Set up a brand <ArrowRight size={15} /></Link>} /></div> :
       <div className="create-layout fade-up"><form className="brief-panel surface" onSubmit={onGenerate}><div className="section-topline"><div><p className="eyebrow">THE BRIEF</p><h3>What are we making?</h3></div><span className="brief-index mono">01—04</span></div>
         <Field label="Brand"><Select value={brandId} onChange={value => { if (value !== brandId) requestId.current = null; setBrandId(value); }} options={brandList.map(b => ({ value: String(b.id), label: b.name }))} testId="select-create-brand" /> <span className="field-hint">{brandList.find(b => String(b.id) === brandId)?.name} voice will guide the draft</span></Field>
         <div className="form-two"><Field label="Platform"><Select value={platform} onChange={value => { if (value !== platform) requestId.current = null; setPlatform(value as Platform); }} options={platformOptions} testId="select-create-platform" /></Field><Field label="Format"><Select value={contentType} onChange={value => { if (value !== contentType) requestId.current = null; setContentType(value as ContentType); }} options={typeOptions} testId="select-create-type" /></Field></div>
