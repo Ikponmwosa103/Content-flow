@@ -24,6 +24,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import './contentflow.css';
+import './contentflow-ui-polish.css';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } });
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
