@@ -100,7 +100,7 @@ const clerkAppearance = {
     colorInputForeground: '#222a3b', colorNeutral: '#e7e1d5', fontFamily: 'DM Sans, sans-serif', borderRadius: '0.75rem',
   },
   elements: {
-    rootBox: 'w-full flex justify-center', cardBox: 'bg-[#fffefa] rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl',
+    rootBox: 'w-full min-w-0 flex justify-center', cardBox: 'bg-[#fffefa] rounded-2xl w-full max-w-[440px] overflow-hidden shadow-xl',
     card: '!shadow-none !border-0 !bg-transparent !rounded-none', footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
     headerTitle: 'text-[#222a3b] font-bold', headerSubtitle: 'text-[#777a7d]',
     socialButtonsBlockButtonText: 'text-[#222a3b] font-semibold', formFieldLabel: 'text-[#343b4c] font-semibold',
