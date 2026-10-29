@@ -12,3 +12,11 @@ This is a focused drop-in replacement for the shared ContentFlow stylesheet. It 
 4. Test at approximately 360px, 390px, 768px, 1024px, and desktop widths before deploying.
 
 This patch only changes presentation styles. It does not modify payment, authentication, API, or database code.
+
+
+V2 polish included:
+- Softer, more consistent corner radii for common controls, cards, panels, chips, and dialogs.
+- Lighter default borders with clearer hover/focus states.
+- Subtle card hover lift and button press feedback.
+- Gentle page/dialog entrance motion with reduced-motion support.
+- No changes to application logic, API calls, authentication, or billing.

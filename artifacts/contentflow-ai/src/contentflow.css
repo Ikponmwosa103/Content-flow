@@ -168,3 +168,161 @@ pre, code { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+
+/* =========================================================
+   ContentFlow UI polish v2
+   Softer borders, consistent radii, subtle motion and hover
+   effects. App behavior and API logic are unchanged.
+   ========================================================= */
+:root {
+  --cf-radius-xs: 8px;
+  --cf-radius-sm: 12px;
+  --cf-radius-md: 16px;
+  --cf-radius-lg: 20px;
+  --cf-radius-xl: 24px;
+  --cf-border-soft: rgba(100, 116, 139, 0.16);
+  --cf-border-hover: rgba(22, 118, 83, 0.28);
+  --cf-shadow-soft: 0 8px 24px rgba(24, 39, 32, 0.055);
+  --cf-shadow-hover: 0 14px 34px rgba(24, 39, 32, 0.095);
+  --cf-motion-fast: 160ms;
+  --cf-motion-normal: 220ms;
+}
+
+/* Softer edges across common UI elements */
+button, input, select, textarea,
+.btn, .button, [role="button"] {
+  border-radius: var(--cf-radius-sm);
+}
+
+input, select, textarea {
+  border-color: var(--cf-border-soft);
+  transition: border-color var(--cf-motion-fast) ease,
+              box-shadow var(--cf-motion-fast) ease,
+              background-color var(--cf-motion-fast) ease;
+}
+
+input:hover, select:hover, textarea:hover {
+  border-color: var(--cf-border-hover);
+}
+
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: rgba(22, 118, 83, 0.62);
+  box-shadow: 0 0 0 3px rgba(22, 118, 83, 0.11);
+}
+
+/* Cards, panels and popovers: less harsh outlines */
+.card, .panel, .stat-card, .metric-card, .content-card,
+.library-card, .brand-card, .calendar-card, .plan-card,
+.dashboard-card, .workspace-card, .modal-content,
+.dialog-content, .popover, .dropdown-menu {
+  border-color: var(--cf-border-soft);
+  border-radius: var(--cf-radius-lg);
+  box-shadow: var(--cf-shadow-soft);
+  transition: border-color var(--cf-motion-normal) ease,
+              box-shadow var(--cf-motion-normal) ease,
+              transform var(--cf-motion-normal) ease;
+}
+
+.library-card:hover, .brand-card:hover, .content-card:hover,
+.plan-card:hover, .workspace-card:hover, .stat-card:hover {
+  border-color: var(--cf-border-hover);
+  box-shadow: var(--cf-shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Softer section containers without forcing all divs to become cards */
+.dashboard-section, .content-panel, .editor-panel,
+.library-toolbar, .brand-detail-grid, .onboarding-panel {
+  border-color: var(--cf-border-soft);
+  border-radius: var(--cf-radius-lg);
+}
+
+/* Button feedback: tactile but restrained */
+button, .btn, .button, [role="button"] {
+  transition: background-color var(--cf-motion-fast) ease,
+              border-color var(--cf-motion-fast) ease,
+              color var(--cf-motion-fast) ease,
+              box-shadow var(--cf-motion-fast) ease,
+              transform var(--cf-motion-fast) ease;
+}
+
+button:hover:not(:disabled), .btn:hover:not(:disabled),
+.button:hover:not(:disabled), [role="button"]:hover {
+  filter: saturate(1.04);
+}
+
+button:active:not(:disabled), .btn:active:not(:disabled),
+.button:active:not(:disabled), [role="button"]:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+button:disabled, .btn:disabled, .button:disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Smooth page entrance and gentle reveal for common page regions */
+@keyframes cf-fade-up {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cf-soft-pop {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+main, .page-content, .dashboard-content, .workspace-content {
+  animation: cf-fade-up 320ms ease-out both;
+}
+
+.modal-content, .dialog-content, [role="dialog"] {
+  animation: cf-soft-pop 180ms ease-out both;
+}
+
+/* Avoid overly sharp borders in tables, chips and tags */
+table, th, td, .table-wrap {
+  border-color: var(--cf-border-soft);
+}
+
+.badge, .chip, .tag, .status-pill, .filter-chip {
+  border-radius: 999px;
+}
+
+hr, .divider, .separator {
+  border-color: var(--cf-border-soft);
+}
+
+/* Mobile: rounded controls and cards remain compact */
+@media (max-width: 640px) {
+  .card, .panel, .stat-card, .metric-card, .content-card,
+  .library-card, .brand-card, .calendar-card, .plan-card,
+  .dashboard-card, .workspace-card, .modal-content,
+  .dialog-content, .popover, .dropdown-menu {
+    border-radius: var(--cf-radius-md);
+  }
+
+  input, select, textarea, button, .btn, .button {
+    border-radius: 11px;
+  }
+
+  .library-card:hover, .brand-card:hover, .content-card:hover,
+  .plan-card:hover, .workspace-card:hover, .stat-card:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main, .page-content, .dashboard-content, .workspace-content,
+  .modal-content, .dialog-content, [role="dialog"] {
+    animation: none !important;
+  }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
