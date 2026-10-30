@@ -265,6 +265,33 @@ function Onboarding() {
   return <Protected><main className="onboarding-page"><Link href="/" className="auth-logo"><BrandMark /></Link><div className="onboarding-layout"><div className="onboarding-aside"><p className="eyebrow">A GOOD PLACE TO BEGIN</p><h1 className="font-display">One home.<br /><em>Your whole voice.</em></h1><p>Set up the workspace and first brand that will guide every draft from here.</p><div className="onboarding-progress"><span className="progress-active" /><span /><span /></div><small>STEP 01 <i>OF</i> 01</small></div><form className="onboarding-form surface soft-shadow" onSubmit={submit}><div className="form-heading"><span className="form-step">01</span><div><p className="eyebrow">FIRST, YOUR FOUNDATION</p><h2 className="font-display">Set the context.</h2></div></div>{!existingWorkspace.data && <Field label="Workspace name"><Input required value={workspaceName} onChange={e => setWorkspaceName(e.target.value)} placeholder="Name your workspace" maxLength={100} testId="input-workspace-name" /></Field>}<div className="form-divider"><span>{existingWorkspace.data ? 'ADD YOUR FIRST BRAND' : 'FIRST BRAND'}</span></div><Field label="Brand name"><Input required value={brandName} onChange={e => setBrandName(e.target.value)} placeholder="Name your brand" maxLength={100} testId="input-brand-name" /></Field><div className="form-two"><Field label="Industry"><Input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="e.g. Independent retail" maxLength={100} testId="input-brand-industry" /></Field><Field label="Website"><Input value={website} onChange={e => setWebsite(e.target.value)} placeholder="brand.com" maxLength={500} testId="input-brand-website" /></Field></div><Field label="Brand voice" hint="How should your brand sound?"><textarea required value={voice} onChange={e => setVoice(e.target.value)} className="input textarea" placeholder="Clear, warm, thoughtful — never overly polished." maxLength={2000} data-testid="input-brand-voice" /></Field><Field label="Who is it for?" hint="Describe the people you want to reach."><textarea required value={audience} onChange={e => setAudience(e.target.value)} className="input textarea" placeholder="Curious people looking for…" maxLength={2000} data-testid="input-target-audience" /></Field><Field label="Content pillars" hint="Add a few themes, separated by commas."><Input value={pillars} onChange={e => setPillars(e.target.value)} placeholder="Behind the scenes, practical tips, point of view" testId="input-content-pillars" /></Field>{error && <div className="form-error" role="alert" data-testid="status-onboarding-error">{error}</div>}<Button type="submit" disabled={saving || existingWorkspace.isLoading} testId="button-create-workspace">{saving ? <><LoaderCircle className="spin" size={16} /> Setting up…</> : existingWorkspace.isLoading ? 'Checking workspace…' : <>Create workspace <ArrowRight size={16} /></>}</Button></form></div></main></Protected>;
 }
 
+function ImageStudio({ onBack }: { onBack: () => void }) {
+  const [prompt, setPrompt] = useState('');
+  const [style, setStyle] = useState('Editorial');
+  const [ratio, setRatio] = useState('1:1');
+  return <section className="image-studio surface" role="tabpanel" aria-label="Image studio">
+    <div className="image-studio-intro">
+      <div><p className="eyebrow">CONTENTFLOW IMAGE STUDIO</p><h2 className="font-display">Bring your idea to life.</h2><p>Shape the visual brief now. Image generation will be connected when you add your API provider.</p></div>
+      <span className="studio-status"><i /> API connection pending</span>
+    </div>
+    <div className="image-studio-grid">
+      <form className="image-studio-controls" onSubmit={e => e.preventDefault()}>
+        <Field label="Describe your image"><textarea value={prompt} onChange={e => setPrompt(e.target.value)} className="input textarea studio-prompt" maxLength={2000} placeholder="Describe the subject, setting, mood, colours and details you want to see…" /></Field>
+        <Field label="Visual direction"><div className="studio-style-grid">{['Editorial','Photographic','Illustration','Minimal','3D render','Bold graphic'].map(item => <button type="button" key={item} onClick={() => setStyle(item)} className={`studio-choice ${style === item ? 'selected' : ''}`} aria-pressed={style === item}>{item}</button>)}</div></Field>
+        <Field label="Aspect ratio"><div className="studio-ratios">{['1:1','4:5','16:9','9:16'].map(item => <button type="button" key={item} onClick={() => setRatio(item)} className={`studio-ratio ${ratio === item ? 'selected' : ''}`} aria-pressed={ratio === item}>{item}</button>)}</div></Field>
+        <button type="button" className="btn btn-primary studio-generate" disabled><WandSparkles size={16} /> Generate image <span>Coming soon</span></button>
+        <p className="studio-footnote">Your prompt and choices are prepared in this interface. Nothing is sent or generated until an image API is connected.</p>
+      </form>
+      <div className="image-studio-preview">
+        <div className="studio-preview-art"><div className="studio-orbit orbit-one" /><div className="studio-orbit orbit-two" /><div className="studio-preview-mark"><Sparkles size={25} /><span>YOUR NEXT VISUAL</span></div></div>
+        <div className="studio-preview-meta"><span>PREVIEW AREA</span><span>{style} · {ratio}</span></div>
+        <p>{prompt.trim() || 'Your image preview will appear here once generation is connected.'}</p>
+      </div>
+    </div>
+    <div className="image-studio-footer"><span><Check size={14} /> Brand-aware workflow planned</span><button type="button" className="btn btn-secondary" onClick={onBack}>Back to text generation</button></div>
+  </section>;
+}
+
 function CreatePage() {
   const [createMode, setCreateMode] = useState<'text' | 'image'>('text');
   const brands = useListBrands(); const create = useCreateContent(); const generate = useGenerateContent(); const qc = useQueryClient();
