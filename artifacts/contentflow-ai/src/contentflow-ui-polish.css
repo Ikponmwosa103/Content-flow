@@ -256,3 +256,82 @@ body, .app-frame, .main-area { background: #244b91; color: #fff; }
 .draft-stage { background: #eaf0fc; color: #24344f; }
 .draft-placeholder h2 { color: #24344f; }
 .draft-placeholder > p:last-child { color: #687991; }
+
+
+/* ContentFlow navy + taskbar teal palette: one consistent blue across the shell. */
+:root {
+  --background: 220 25% 17%;
+  --foreground: 210 40% 98%;
+  --card: 210 40% 98%;
+  --card-foreground: 220 30% 20%;
+  --sidebar: 220 25% 17%;
+  --sidebar-foreground: 210 40% 98%;
+  --primary: 172 82% 46%;
+  --primary-foreground: 220 25% 17%;
+  --ring: 172 82% 46%;
+}
+body, .app-frame, .main-area, .topbar {
+  background: #202a38 !important;
+  color: #f4f8ff;
+}
+.sidebar {
+  background: #202a38 !important;
+  color: #eef5ff;
+  border-right: 1px solid #344457;
+}
+.topbar { border-bottom: 1px solid #344457; }
+.side-brand .brand-word, .crumb, .crumb b, .page-heading h1 { color: #f4f8ff; }
+.page-heading p, .page-subtitle, .crumb-slash { color: #b9c9df; }
+.side-nav .nav-link { color: #c4d2e5; }
+.side-nav .nav-link:hover, .side-nav .nav-active {
+  color: #ffffff;
+  background: linear-gradient(100deg, rgba(18,211,188,.2), rgba(94,160,232,.13));
+}
+.side-nav .nav-active { box-shadow: inset 3px 0 #12d3bc; }
+.side-nav .nav-active svg, .side-nav .nav-new { color: #12d3bc; }
+.workspace-chip {
+  background: #294f91;
+  border: 1px solid #3d68ad;
+  color: #fff;
+}
+.workspace-chip small { color: #d4e5ff; }
+.health-dot.is-up, .connection-status .health-dot { background: #12d3bc; }
+.health-line { color: #a9bdd7; border-color: #43546a; }
+.profile-row { color: #eaf2ff; }
+.profile-row small { color: #9fb2cb; }
+.profile-row:hover { background: #2b394c; }
+.surface, .metric-card, .usage-panel, .content-panel, .upcoming-panel, .plan-card, .settings-panel {
+  background: #f8fbff;
+  color: #24344f;
+  border: 1px solid #dce8f8;
+  box-shadow: 0 10px 28px rgba(4,12,25,.16);
+}
+.welcome-panel {
+  background: linear-gradient(120deg,#eff8ff 0%,#e1efff 55%,#e6fbf7 100%);
+  border-color: #c9e4f4;
+}
+.metric-icon { background: #e5f5f4; color: #087f79; }
+.btn-primary, .top-create {
+  background: #12bfae;
+  border-color: #12bfae;
+  color: #102f3b;
+}
+.btn-primary:hover:not(:disabled) { background: #0da895; border-color: #0da895; }
+.btn-secondary { background: #eaf2ff; border-color: #c9dcf5; color: #294f91; }
+.btn-secondary:hover:not(:disabled) { background: #dceaff; border-color: #a9c8ef; }
+.text-link, .welcome-link, .plan-price, .usage-count { color: #087f86; }
+.usage-track { background: #dce8f5; }
+.usage-track span { background: linear-gradient(90deg,#12bfae,#5c9fe8); }
+.plan-current { background: #eaf4ff; border-color: #c9def7; color: #24344f; }
+.plan-featured { border-color: #5bcfc1; box-shadow: 0 12px 30px rgba(18,191,174,.13); }
+.create-mode-tabs { background: #eaf2ff; border-color: #d1e0f4; }
+.create-mode-tab.active { color: #087f86; box-shadow: 0 2px 8px rgba(25,66,105,.1); }
+.image-generation-placeholder { background: linear-gradient(135deg,#f5faff,#e7f3ff 60%,#e4faf6); }
+.image-generation-placeholder h2 { color: #243f69; }
+.draft-stage { background: #eaf2ff; color: #24344f; }
+.draft-placeholder h2 { color: #243f69; }
+.inline-message.success { background: #e2faf4; color: #087f70; border-color: #b7eee1; }
+@media (max-width: 760px) {
+  .main-area, .page-wrap { min-width: 0; }
+  .topbar { padding-inline: 14px; }
+}
