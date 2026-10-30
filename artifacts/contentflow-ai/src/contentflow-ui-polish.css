@@ -203,3 +203,56 @@ body, .app-frame { background: #f7f7f4; color: #252d39; }
   .auth-intro h1 { font-size: 30px; }
   .auth-page .cl-cardBox { padding-inline: 12px; }
 }
+
+
+/* Blue/white palette inversion requested for the workspace UI. */
+:root {
+  --background: 220 55% 34%;
+  --foreground: 0 0% 100%;
+  --card: 220 55% 34%;
+  --card-foreground: 0 0% 100%;
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 220 35% 20%;
+  --primary: 0 0% 100%;
+  --primary-foreground: 220 55% 34%;
+}
+body, .app-frame, .main-area { background: #244b91; color: #fff; }
+.sidebar { background: #fff; color: #243b65; border-right: 1px solid #dce4f2; }
+.side-brand .brand-word, .sidebar .side-label { color: #244b91; }
+.workspace-chip { background: #244b91; border-color: #244b91; color: #fff; }
+.workspace-chip small, .workspace-chip > svg { color: #dce7ff; }
+.nav-link { color: #405477; }
+.nav-link:hover, .nav-active { background: #e8efff; color: #244b91; }
+.nav-active:before { background: #244b91; }
+.nav-active svg { color: #244b91; }
+.health-line { color: #536785; border-color: #dce4f2; }
+.profile-row { color: #243b65; }
+.profile-row small { color: #71809a; }
+.profile-row:hover { background: #edf2fc; }
+.topbar { background: #244b91; border-bottom-color: #365da0; }
+.crumb, .crumb b { color: #fff; }
+.crumb-slash { color: #b9c9e9; }
+.page-heading h1, .page-heading p { color: #fff; }
+.page-subtitle { color: #dce7ff; }
+.surface, .metric-card, .usage-panel, .content-panel, .upcoming-panel, .plan-card, .settings-panel {
+  background: #fff;
+  color: #24344f;
+  border-color: #dce4f2;
+}
+.section-topline h3, .row-title, .metric-label, .plan-card h2 { color: #24344f; }
+.eyebrow, .row-meta, .metric-card small, .plan-detail p { color: #687991; }
+.plan-price, .usage-count, .welcome-link, .text-link { color: #244b91; }
+.plan-current { background: #eef3ff; border-color: #d5e0f5; color: #24344f; }
+.plan-featured { border-color: #8da9df; box-shadow: 0 8px 22px rgba(10,35,82,.14); }
+.btn-primary { background: #244b91; border-color: #244b91; color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #193b79; border-color: #193b79; }
+.btn-secondary { background: #fff; border-color: #d5deed; color: #244b91; }
+.btn-secondary:hover:not(:disabled) { background: #edf2fc; border-color: #b8c9e8; }
+.create-mode-tabs { background: #eaf0fc; border-color: #d5deed; }
+.create-mode-tab { color: #536785; }
+.create-mode-tab.active { background: #fff; color: #244b91; border-color: #d5deed; }
+.image-generation-placeholder h2 { color: #244b91; }
+.image-generation-placeholder > p:not(.eyebrow) { color: #687991; }
+.draft-stage { background: #eaf0fc; color: #24344f; }
+.draft-placeholder h2 { color: #24344f; }
+.draft-placeholder > p:last-child { color: #687991; }
