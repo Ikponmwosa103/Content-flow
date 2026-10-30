@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "content-flow",
+  "compatibility_date": "2026-10-30",
+  "assets": {
+    "directory": "./artifacts/contentflow-ai/dist/public",
+    "not_found_handling": "single-page-application"
+  }
+}
