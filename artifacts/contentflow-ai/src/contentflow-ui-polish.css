@@ -377,3 +377,65 @@ body, .app-frame, .main-area, .topbar {
  .studio-style-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
  .image-studio-footer { align-items:flex-start; flex-direction:column; }
 }
+
+/* Create brief card: sidebar navy/teal surface, white outline and white controls. */
+.brief-panel.surface {
+  color: #f1f6ff;
+  background:
+    radial-gradient(ellipse at 0% 100%, rgba(0, 211, 198, .11), transparent 38%),
+    linear-gradient(180deg, #09172b 0%, #071326 100%);
+  border: 1px solid rgba(255, 255, 255, .92);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .24), inset 0 1px rgba(255,255,255,.06);
+}
+.brief-panel .section-topline h3,
+.brief-panel .field-label { color: #f5f8ff; }
+.brief-panel .eyebrow,
+.brief-panel .brief-index { color: #b9c9df; }
+.brief-panel .field-hint { color: #a7b7d0; }
+.brief-panel .input,
+.brief-panel input,
+.brief-panel select,
+.brief-panel textarea {
+  color: #1b2b43;
+  background: #fff;
+  border: 1px solid #fff;
+  box-shadow: none;
+}
+.brief-panel .input::placeholder,
+.brief-panel textarea::placeholder { color: #68778b; opacity: 1; }
+.brief-panel select option { color: #1b2b43; background: #fff; }
+.brief-panel .input:focus,
+.brief-panel input:focus,
+.brief-panel select:focus,
+.brief-panel textarea:focus {
+  border-color: #12e6c2;
+  outline: 2px solid rgba(18, 230, 194, .24);
+  box-shadow: 0 0 0 3px rgba(18, 230, 194, .12);
+}
+.brief-panel .select {
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='m3 4.5 3 3 3-3' stroke='%231b2b43' stroke-width='1.4'/%3E%3C/svg%3E");
+}
+.brief-panel .inline-message { color: #7c302b; background: #fff0ee; }
+.brief-panel .inline-message.success { color: #176047; background: #e8fff5; }
+
+/* Clerk sign-up/sign-in card: keep every field and heading inset from the card edge. */
+.auth-page .auth-card .cl-cardBox {
+  padding: 28px !important;
+  box-sizing: border-box;
+}
+.auth-page .auth-card .cl-card {
+  padding: 24px !important;
+  box-sizing: border-box;
+}
+.auth-page .auth-card .cl-main,
+.auth-page .auth-card .cl-header,
+.auth-page .auth-card .cl-footer {
+  padding-inline: 0;
+  box-sizing: border-box;
+}
+@media (max-width: 480px) {
+  .auth-page .auth-card .cl-cardBox { padding: 18px !important; }
+  .auth-page .auth-card .cl-card { padding: 18px !important; }
+}
+
