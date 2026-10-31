@@ -415,6 +415,9 @@ body, .app-frame, .main-area, .topbar {
 .brief-panel .select {
   background-color: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='m3 4.5 3 3 3-3' stroke='%231b2b43' stroke-width='1.4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 12px;
 }
 .brief-panel .inline-message { color: #7c302b; background: #fff0ee; }
 .brief-panel .inline-message.success { color: #176047; background: #e8fff5; }
