@@ -49,6 +49,7 @@ import type { ReservationResult } from "../lib/generation-usage";
 import {
   AiProviderError,
   generateDraft,
+  generateImage,
   fingerprintGenerationPrompt,
   isAiProviderConfigured,
   MAX_GENERATION_PROMPT_CHARS,
@@ -288,6 +289,128 @@ router.get("/calendar", async (req, res): Promise<void> => {
     lt(contentsTable.scheduledAt, end),
   ]);
   res.json(GetCalendarResponse.parse(items));
+});
+
+
+router.post("/images/generate", async (req, res): Promise<void> => {
+  const userId = getAuthenticatedUserId(res);
+  const workspace = await findWorkspaceForUser(userId);
+  if (!workspace) {
+    res.status(404).json({ error: "Workspace not found" });
+    return;
+  }
+
+  const body = req.body as Record<string, unknown>;
+  const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
+  const style = typeof body?.style === "string" ? body.style : "Editorial";
+  const aspectRatio = typeof body?.aspectRatio === "string" ? body.aspectRatio : "1:1";
+  const brandId = Number(body?.brandId);
+  const requestId = typeof body?.requestId === "string" ? body.requestId : "";
+  if (!prompt || prompt.length > 2000 || !Number.isSafeInteger(brandId) || brandId <= 0 ||
+      !/^[0-9a-f-]{36}$/i.test(requestId) ||
+      !["Editorial", "Photographic", "Illustration", "Minimal", "3D render", "Bold graphic"].includes(style) ||
+      !["1:1", "4:5", "16:9", "9:16"].includes(aspectRatio)) {
+    res.status(400).json({ error: "Provide a valid image prompt, brand, style, aspect ratio and request ID." });
+    return;
+  }
+  if (!isAiProviderConfigured()) {
+    res.status(503).json({ error: "Image generation is not configured. Add GEMINI_API_KEY to the API server." });
+    return;
+  }
+  const brand = await findBrandForWorkspace(brandId, workspace.id);
+  if (!brand) {
+    res.status(404).json({ error: "Brand not found" });
+    return;
+  }
+
+  const imagePrompt = JSON.stringify({
+    prompt,
+    style,
+    aspectRatio,
+    brand: { name: brand.name, industry: brand.industry, voice: brand.brandVoice },
+  });
+  let reservation: ReservationResult;
+  try {
+    reservation = await reserveGeneration({
+      workspaceId: workspace.id,
+      requestId,
+      requestHash: fingerprintGenerationPrompt(imagePrompt),
+      plan: getPlanForWorkspace(workspace.plan),
+      periodAnchor: workspace.plan === "free"
+        ? workspace.createdAt
+        : workspace.subscriptionStartedAt ?? (workspace.planRenewalAt
+          ? new Date(workspace.planRenewalAt.getTime() - 30 * 24 * 60 * 60 * 1000)
+          : workspace.createdAt),
+    });
+  } catch (error) {
+    req.log.error({ errorName: error instanceof Error ? error.name : "UnknownError" }, "Could not reserve image generation usage");
+    res.status(503).json({ error: "Image generation is temporarily unavailable. Try again shortly." });
+    return;
+  }
+  if (reservation.kind === "rate_limited") {
+    res.setHeader("Retry-After", String(reservation.retryAfterSeconds));
+    res.status(429).json({ error: "Too many generation requests. Please wait before trying again." });
+    return;
+  }
+  if (reservation.kind === "quota_exhausted") {
+    res.status(429).json({ error: `You've used all ${reservation.limit} AI generations for this billing period.` });
+    return;
+  }
+  if (reservation.kind === "in_progress") {
+    res.status(409).json({ error: "This image request is already being processed." });
+    return;
+  }
+  if (reservation.kind === "idempotency_conflict" || reservation.kind === "cached") {
+    res.status(409).json({ error: "This request ID has already been used. Start a new image request." });
+    return;
+  }
+
+  const controller = new AbortController();
+  const abortOnDisconnect = () => { if (!res.writableEnded) controller.abort(); };
+  req.once("aborted", abortOnDisconnect);
+  res.once("close", abortOnDisconnect);
+  try {
+    const generated = await generateImage({
+      prompt,
+      style,
+      aspectRatio,
+      brandContext: `${brand.name} — ${brand.industry}; brand voice: ${brand.brandVoice}`,
+      signal: controller.signal,
+    });
+    if (controller.signal.aborted || res.destroyed) {
+      await releaseGeneration({ workspaceId: workspace.id, requestId });
+      return;
+    }
+    const completed = await completeGeneration({
+      workspaceId: workspace.id,
+      requestId,
+      result: { title: "Generated image", body: "Image generation completed." },
+    });
+    if (!completed) {
+      res.status(409).json({ error: "This generation reservation expired. Please try again." });
+      return;
+    }
+    res.json({
+      mimeType: generated.mimeType,
+      data: generated.data,
+      usage: await getUsageSummary(workspace),
+    });
+  } catch (error) {
+    try { await releaseGeneration({ workspaceId: workspace.id, requestId }); }
+    catch (releaseError) {
+      req.log.error({ errorName: releaseError instanceof Error ? releaseError.name : "UnknownError" }, "Could not release failed image generation reservation");
+    }
+    if (controller.signal.aborted || res.destroyed || res.writableEnded) return;
+    if (error instanceof AiProviderError) {
+      res.status(error.statusCode).json({ error: error.publicMessage });
+      return;
+    }
+    req.log.error({ errorName: error instanceof Error ? error.name : "UnknownError" }, "Image generation failed");
+    res.status(502).json({ error: "Image generation failed. Please try again." });
+  } finally {
+    req.off("aborted", abortOnDisconnect);
+    res.off("close", abortOnDisconnect);
+  }
 });
 
 router.post("/generate", async (req, res): Promise<void> => {
