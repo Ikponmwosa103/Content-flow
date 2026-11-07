@@ -442,3 +442,15 @@ body, .app-frame, .main-area, .topbar {
   .auth-page .auth-card .cl-card { padding: 18px !important; }
 }
 
+
+/* Native Gemini image preview. */
+.studio-generated-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 620px;
+  object-fit: contain;
+  border: 1px solid #dce6ef;
+  border-radius: 14px;
+  background: #f7fafc;
+}
