@@ -257,3 +257,61 @@ export async function generateDraft(input: {
       throw mapProviderError(error);
     }
 }
+
+// Image generation uses Gemini's native image output. The API key stays on the server.
+export interface GeneratedImage {
+  mimeType: string;
+  data: string;
+}
+
+export async function generateImage(input: {
+  prompt: string;
+  style: string;
+  aspectRatio: string;
+  brandContext?: string;
+  signal?: AbortSignal;
+}): Promise<GeneratedImage> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new AiProviderError(503, "Image generation is not configured", "MISSING_GEMINI_API_KEY");
+  }
+  const model = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: { timeout: AI_REQUEST_TIMEOUT_MS },
+    });
+    const response = await ai.models.generateContent({
+      model,
+      contents: [{
+        role: "user",
+        parts: [{
+          text: [
+            "Create one polished, original image for a marketing content workflow.",
+            `Visual direction: ${input.style}.`,
+            `Aspect ratio: ${input.aspectRatio}.`,
+            input.brandContext ? `Brand context: ${input.brandContext}` : "",
+            `Image brief: ${input.prompt}`,
+          ].filter(Boolean).join("\\n"),
+        }],
+      }],
+      config: {
+        responseModalities: ["IMAGE"],
+        abortSignal: input.signal,
+      },
+    });
+    const parts = response.candidates?.flatMap(candidate => candidate.content?.parts ?? []) ?? [];
+    const imagePart = parts.find(part => part.inlineData?.data && part.inlineData.mimeType?.startsWith("image/"));
+    if (!imagePart?.inlineData?.data || !imagePart.inlineData.mimeType) {
+      throw new Error("Gemini returned no image data");
+    }
+    return { mimeType: imagePart.inlineData.mimeType, data: imagePart.inlineData.data };
+  } catch (error) {
+    if (error instanceof AiProviderError) throw error;
+    console.error("[Gemini image generation error]", {
+      model,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw mapProviderError(error);
+  }
+}
