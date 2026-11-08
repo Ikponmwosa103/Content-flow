@@ -21,6 +21,9 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 22
+          # The runner does not have pnpm installed yet; disable setup-node's
+          # automatic package-manager cache detection (it invokes pnpm here).
+          package-manager-cache: false
 
       - name: Set up Java
         uses: actions/setup-java@v5
