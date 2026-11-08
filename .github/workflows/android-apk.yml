@@ -27,37 +27,33 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-          # Capacitor generates the Android project and Gradle wrapper later.
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install pnpm
-        run: npm install --global pnpm@12.15.0
-
+      # Invoke pnpm through npx so the workflow does not depend on a global
+      # executable being added to PATH by an installation step.
       - name: Verify toolchain
         run: |
           node --version
           npm --version
-          pnpm --version
+          npx --yes pnpm@12.15.0 --version
           java -version
 
       - name: Install workspace dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: npx --yes pnpm@12.15.0 install --no-frozen-lockfile
 
       - name: Build web frontend
-        run: pnpm --filter @workspace/contentflow-ai run build
+        run: npx --yes pnpm@12.15.0 --filter @workspace/contentflow-ai run build
 
-      # Install through pnpm because this is a pnpm workspace package and its
-      # manifest contains workspace: dependencies (npm install cannot resolve them).
       - name: Add Capacitor tooling to the app workspace
-        run: pnpm --filter @workspace/contentflow-ai add @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+        run: npx --yes pnpm@12.15.0 --filter @workspace/contentflow-ai add @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
 
       - name: Generate Android project
-        run: pnpm --filter @workspace/contentflow-ai exec cap add android
+        run: npx --yes pnpm@12.15.0 --filter @workspace/contentflow-ai exec cap add android
 
       - name: Sync Android project
-        run: pnpm --filter @workspace/contentflow-ai exec cap sync android
+        run: npx --yes pnpm@12.15.0 --filter @workspace/contentflow-ai exec cap sync android
 
       - name: Build installable debug APK
         working-directory: artifacts/contentflow-ai/android
