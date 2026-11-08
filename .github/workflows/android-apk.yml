@@ -2,6 +2,9 @@ name: Build ContentFlow Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/android-apk-wrapper
 
 permissions:
   contents: read
