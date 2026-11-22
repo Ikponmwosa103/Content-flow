@@ -1,2 +1,13 @@
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /create
+Disallow: /library
+Disallow: /calendar
+Disallow: /brands
+Disallow: /pricing
+Disallow: /settings
+Disallow: /sign-in
+Disallow: /sign-up
+
+Sitemap: https://content-flow-workspace.netlify.app/sitemap.xml
