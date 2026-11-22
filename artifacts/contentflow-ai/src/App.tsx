@@ -462,7 +462,7 @@ function Calendar() {
     if (!plannerBrandId || !brandList.length || generate.isPending) return;
     const now = new Date();
     const [planYear, planMonth] = month.split('-').map(Number);
-    const firstAvailableDay = planYear === now.getFullYear() && planMonth === now.getMonth() + 1 ? now.getDate() : 1;
+    const firstAvailableDay = planYear === now.getFullYear() && planMonth === now.getMonth() + 1 ? (now.getHours() >= 10 ? now.getDate() + 1 : now.getDate()) : 1;
     const availableDays = Array.from({ length: Math.max(0, new Date(planYear, planMonth, 0).getDate() - firstAvailableDay + 1) }, (_, index) => firstAvailableDay + index);
     if (!availableDays.length) { setPlannerMessage('This month has no future dates left. Move to the next month to create a plan.'); return; }
     setPlannerMessage('');
@@ -482,16 +482,18 @@ function Calendar() {
       onSuccess: result => {
         plannerRequestId.current = null;
         try {
-          const raw = result.body.trim().replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
+          const raw = result.body.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
           const jsonStart = raw.indexOf('{');
           const jsonEnd = raw.lastIndexOf('}');
           const parsed = JSON.parse(jsonStart >= 0 && jsonEnd > jsonStart ? raw.slice(jsonStart, jsonEnd + 1) : raw) as { posts?: unknown };
           if (!Array.isArray(parsed.posts)) throw new Error('The AI response did not contain a posts array.');
-          const valid = parsed.posts.flatMap((post: any) => {
-            if (!post || !Number.isInteger(post.day) || !availableDays.includes(post.day) || typeof post.title !== 'string' || typeof post.body !== 'string' || !post.title.trim() || !post.body.trim()) return [];
-            const platform = platformOptions.includes(post.platform) ? post.platform : 'instagram';
-            const contentType = typeOptions.includes(post.contentType) ? post.contentType : 'post';
-            return [{ day: post.day, title: post.title.trim().slice(0, 200), body: post.body.trim().slice(0, 20000), platform, contentType }];
+          const valid = parsed.posts.flatMap(candidate => {
+            if (!candidate || typeof candidate !== 'object') return [];
+            const post = candidate as Record<string, unknown>;
+            if (!Number.isInteger(post.day) || !availableDays.includes(post.day as number) || typeof post.title !== 'string' || typeof post.body !== 'string' || !post.title.trim() || !post.body.trim()) return [];
+            const platform = typeof post.platform === 'string' && platformOptions.includes(post.platform as Platform) ? post.platform as Platform : 'instagram';
+            const contentType = typeof post.contentType === 'string' && typeOptions.includes(post.contentType as ContentType) ? post.contentType as ContentType : 'post';
+            return [{ day: post.day as number, title: post.title.trim().slice(0, 200), body: post.body.trim().slice(0, 20000), platform, contentType }];
           });
           if (!valid.length) throw new Error('No usable posts were returned. Please generate the plan again.');
           setCalendarPlan(valid);
@@ -520,7 +522,7 @@ function Calendar() {
       setCalendarPlan([]);
       setPlannerMessage(`Added ${saved} posts to your calendar.`);
       await Promise.all([qc.invalidateQueries({ queryKey: getGetCalendarQueryKey() }), qc.invalidateQueries({ queryKey: getListContentsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }), qc.invalidateQueries({ queryKey: getGetUsageQueryKey() })]);
-    } catch (saveError) {
+    } catch {
       setCalendarPlan(current => current.slice(saved));
       setPlannerMessage(`Saved ${saved} posts. The remaining posts are still here so you can retry.`);
     } finally {
