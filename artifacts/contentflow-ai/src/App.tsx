@@ -427,17 +427,119 @@ function ContentEditor({ item, brands, onClose, onSave, pending }: { item: Conte
 
 function Calendar() {
   const [month, setMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; });
-  const params = useMemo(() => ({ month }), [month]); const calendar = useGetCalendar(params, { query: { queryKey: getGetCalendarQueryKey(params) } }); const contents = useListContents({ status: 'draft' }); const update = useUpdateContent(); const qc = useQueryClient();
-  const [selected, setSelected] = useState<ContentItem | null>(null); const [scheduleDate, setScheduleDate] = useState(''); const [error, setError] = useState('');
+  const params = useMemo(() => ({ month }), [month]);
+  const calendar = useGetCalendar(params, { query: { queryKey: getGetCalendarQueryKey(params) } });
+  const contents = useListContents({ status: 'draft' });
+  const brands = useListBrands();
+  const update = useUpdateContent();
+  const create = useCreateContent();
+  const generate = useGenerateContent();
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<ContentItem | null>(null);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [error, setError] = useState('');
+  const [plannerBrandId, setPlannerBrandId] = useState('');
+  const [plannerGoal, setPlannerGoal] = useState('');
+  const [plannerTone, setPlannerTone] = useState('Helpful, clear and engaging');
+  const [calendarPlan, setCalendarPlan] = useState<Array<{ day: number; title: string; body: string; platform: Platform; contentType: ContentType }>>([]);
+  const [plannerMessage, setPlannerMessage] = useState('');
+  const [savingPlan, setSavingPlan] = useState(false);
+  const plannerRequestId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!plannerBrandId && brands.data?.length) setPlannerBrandId(String(brands.data[0].id));
+  }, [brands.data, plannerBrandId]);
   const [year, mon] = month.split('-').map(Number); const firstDay = new Date(year, mon - 1, 1).getDay(); const days = new Date(year, mon, 0).getDate();
   const itemsByDay = new Map<number, ContentItem[]>();
   calendar.data?.forEach(item => { if (item.scheduledAt) { const day = new Date(item.scheduledAt).getDate(); itemsByDay.set(day, [...(itemsByDay.get(day) || []), item]); } });
   const prev = () => { const d = new Date(year, mon - 2, 1); setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); };
   const next = () => { const d = new Date(year, mon, 1); setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); };
   const schedule = (e: FormEvent) => { e.preventDefault(); if (!selected || !scheduleDate) return; const itemId = selected.id; setError(''); update.mutate({ id: itemId, data: { status: 'scheduled', scheduledAt: new Date(scheduleDate).toISOString() } }, { onSuccess: () => { setSelected(null); setScheduleDate(''); void Promise.all([qc.invalidateQueries({ queryKey: getGetCalendarQueryKey() }), qc.invalidateQueries({ queryKey: getListContentsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }), qc.invalidateQueries({ queryKey: getGetContentQueryKey(itemId) })]); }, onError: () => setError('Could not schedule this content. Try again.') }); };
-  if (calendar.isLoading || contents.isLoading) return <Page title="Calendar" subtitle="A simple view of what is coming up."><LoadingBlock /></Page>;
-  if (calendar.isError || contents.isError) return <Page title="Calendar" subtitle="A simple view of what is coming up."><ErrorBlock retry={() => { void calendar.refetch(); void contents.refetch(); }} /></Page>;
-  return <Page title="Calendar" subtitle="A simple view of what is coming up." action={<Link href="/library" className="btn btn-secondary" data-testid="link-calendar-library"><BookOpen size={15} /> Browse library</Link>}>
+  if (calendar.isLoading || contents.isLoading || brands.isLoading) return <Page title="Calendar" subtitle="Plan, generate and organise your upcoming content."><LoadingBlock /></Page>;
+  if (calendar.isError || contents.isError || brands.isError) return <Page title="Calendar" subtitle="Plan, generate and organise your upcoming content."><ErrorBlock retry={() => { void calendar.refetch(); void contents.refetch(); void brands.refetch(); }} /></Page>;
+  const brandList = brands.data ?? [];
+  const generateCalendarPlan = (event: FormEvent) => {
+    event.preventDefault();
+    if (!plannerBrandId || !brandList.length || generate.isPending) return;
+    const now = new Date();
+    const [planYear, planMonth] = month.split('-').map(Number);
+    const firstAvailableDay = planYear === now.getFullYear() && planMonth === now.getMonth() + 1 ? now.getDate() : 1;
+    const availableDays = Array.from({ length: Math.max(0, new Date(planYear, planMonth, 0).getDate() - firstAvailableDay + 1) }, (_, index) => firstAvailableDay + index);
+    if (!availableDays.length) { setPlannerMessage('This month has no future dates left. Move to the next month to create a plan.'); return; }
+    setPlannerMessage('');
+    setCalendarPlan([]);
+    const stableId = plannerRequestId.current ?? crypto.randomUUID();
+    plannerRequestId.current = stableId;
+    const brief = [
+      'Create a practical social content calendar as STRICT JSON only. Do not use markdown fences or explanatory text.',
+      'Return an object with a "posts" array. Each post must contain: day (integer from the allowed days), title (short), body (complete original post copy), platform (one of instagram, facebook, linkedin, x, tiktok, blog, email), contentType (one of caption, post, thread, blog, email).',
+      'Create 8 varied posts, spread across the available days. Avoid duplicate angles. Include a mix of educational, community, story, proof and promotional content. Never invent testimonials, statistics or product claims.',
+      'Allowed day numbers for the selected month: ' + availableDays.join(', ') + '.',
+      'Business objective: ' + (plannerGoal.trim() || 'Build awareness, trust and meaningful engagement.'),
+      'Preferred tone: ' + plannerTone + '.',
+      'The server will supply the selected brand voice, audience and content pillars. Respect those details.',
+    ].join('\n').slice(0, 2000);
+    generate.mutate({ data: { requestId: stableId, brandId: Number(plannerBrandId), platform: 'instagram', contentType: 'post', topic: brief, objective: plannerGoal || undefined, tone: plannerTone } }, {
+      onSuccess: result => {
+        plannerRequestId.current = null;
+        try {
+          const raw = result.body.trim().replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/, '');
+          const jsonStart = raw.indexOf('{');
+          const jsonEnd = raw.lastIndexOf('}');
+          const parsed = JSON.parse(jsonStart >= 0 && jsonEnd > jsonStart ? raw.slice(jsonStart, jsonEnd + 1) : raw) as { posts?: unknown };
+          if (!Array.isArray(parsed.posts)) throw new Error('The AI response did not contain a posts array.');
+          const valid = parsed.posts.flatMap((post: any) => {
+            if (!post || !Number.isInteger(post.day) || !availableDays.includes(post.day) || typeof post.title !== 'string' || typeof post.body !== 'string' || !post.title.trim() || !post.body.trim()) return [];
+            const platform = platformOptions.includes(post.platform) ? post.platform : 'instagram';
+            const contentType = typeOptions.includes(post.contentType) ? post.contentType : 'post';
+            return [{ day: post.day, title: post.title.trim().slice(0, 200), body: post.body.trim().slice(0, 20000), platform, contentType }];
+          });
+          if (!valid.length) throw new Error('No usable posts were returned. Please generate the plan again.');
+          setCalendarPlan(valid);
+          setPlannerMessage(`Created ${valid.length} calendar ideas. Review them before adding them to your calendar.`);
+        } catch (parseError) {
+          setPlannerMessage(parseError instanceof Error ? parseError.message : 'The calendar plan could not be read. Please try again.');
+        }
+      },
+      onError: err => {
+        plannerRequestId.current = null;
+        setPlannerMessage(apiErrorMessage(err, 'Could not generate a calendar. Please try again.'));
+      },
+    });
+  };
+  const saveCalendarPlan = async () => {
+    if (!calendarPlan.length || savingPlan) return;
+    setSavingPlan(true);
+    setPlannerMessage('');
+    let saved = 0;
+    try {
+      for (const post of calendarPlan) {
+        const scheduledAt = new Date(year, mon - 1, post.day, 10, 0, 0).toISOString();
+        await create.mutateAsync({ data: { brandId: Number(plannerBrandId), title: post.title, body: post.body, platform: post.platform, contentType: post.contentType, status: 'scheduled', scheduledAt, tags: ['ai-calendar'] } });
+        saved += 1;
+      }
+      setCalendarPlan([]);
+      setPlannerMessage(`Added ${saved} posts to your calendar.`);
+      await Promise.all([qc.invalidateQueries({ queryKey: getGetCalendarQueryKey() }), qc.invalidateQueries({ queryKey: getListContentsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() }), qc.invalidateQueries({ queryKey: getGetUsageQueryKey() })]);
+    } catch (saveError) {
+      setCalendarPlan(current => current.slice(saved));
+      setPlannerMessage(`Saved ${saved} posts. The remaining posts are still here so you can retry.`);
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+  return <Page title="Calendar" subtitle="Plan, generate and organise your upcoming content." action={<Link href="/library" className="btn btn-secondary" data-testid="link-calendar-library"><BookOpen size={15} /> Browse library</Link>}>
+    <section className="ai-calendar-planner surface">
+      <div className="ai-calendar-heading"><div><p className="eyebrow">AI CONTENT PLANNER</p><h2 className="font-display">Build a month with direction.</h2><p>Generate a brand-aware plan, review every post, then add the schedule to your calendar.</p></div><span className="ai-calendar-badge"><Sparkles size={14} /> AI assisted</span></div>
+      <form className="ai-calendar-form" onSubmit={generateCalendarPlan}>
+        <Field label="Brand"><Select value={plannerBrandId} onChange={setPlannerBrandId} options={brandList.map(brand => ({ value: String(brand.id), label: brand.name }))} testId="select-calendar-brand" /></Field>
+        <Field label="Monthly objective"><Input value={plannerGoal} onChange={event => setPlannerGoal(event.target.value)} placeholder="e.g. Introduce our new service and build trust" maxLength={500} testId="input-calendar-goal" /></Field>
+        <Field label="Preferred tone"><Input value={plannerTone} onChange={event => setPlannerTone(event.target.value)} maxLength={200} testId="input-calendar-tone" /></Field>
+        <Button type="submit" disabled={generate.isPending || !plannerBrandId} testId="button-generate-calendar"><WandSparkles size={15} /> {generate.isPending ? 'Building your calendar…' : `Generate ${new Date(year, mon - 1).toLocaleDateString(undefined, { month: 'long' })} plan`}</Button>
+      </form>
+      {plannerMessage && <p className="ai-calendar-message" role="status" data-testid="status-calendar-planner">{plannerMessage}</p>}
+      {calendarPlan.length > 0 && <div className="ai-calendar-preview"><div className="ai-calendar-preview-head"><strong>{calendarPlan.length} suggested posts</strong><Button onClick={() => void saveCalendarPlan()} disabled={savingPlan || create.isPending} testId="button-save-calendar-plan">{savingPlan ? 'Adding posts…' : 'Add all to calendar'}</Button></div><div className="ai-calendar-posts">{calendarPlan.map((post, index) => <article className="ai-calendar-post" key={`${post.day}-${index}`}><div className="ai-calendar-post-date"><b>{post.day}</b><span>{new Date(year, mon - 1, post.day).toLocaleDateString(undefined, { month: 'short' })}</span></div><div><strong>{post.title}</strong><p>{post.body}</p><span className="ai-calendar-post-meta">{label(post.platform)} · {label(post.contentType)} · 10:00 AM</span></div></article>)}</div></div>}
+      <p className="ai-calendar-disclaimer">Generated posts are saved as scheduled items in your ContentFlow calendar. They are not automatically published to social platforms.</p>
+    </section>
     <section className="calendar-panel surface fade-up"><div className="calendar-toolbar"><div><p className="eyebrow">PUBLISHING PLAN</p><h2 className="font-display" data-testid="text-calendar-month">{new Date(year, mon - 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2></div><div className="calendar-controls"><button className="icon-btn" aria-label="Previous month" onClick={prev} data-testid="button-calendar-previous"><ChevronLeft size={18} /></button><button className="btn btn-secondary calendar-today" onClick={() => { const d = new Date(); setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }} data-testid="button-calendar-today">Today</button><button className="icon-btn" aria-label="Next month" onClick={next} data-testid="button-calendar-next"><ChevronRight size={18} /></button></div></div>
        <div className="calendar-grid"><div className="calendar-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <span key={day}>{day}</span>)}</div><div className="calendar-days">{Array.from({ length: firstDay }, (_, i) => <div className="calendar-cell calendar-blank" key={`blank-${i}`} />)}{Array.from({ length: days }, (_, i) => { const day = i + 1; const entries = itemsByDay.get(day) || []; const isToday = new Date().getDate() === day && new Date().getMonth() + 1 === mon && new Date().getFullYear() === year; return <div className={`calendar-cell ${isToday ? 'calendar-today-cell' : ''}`} key={day} data-testid={`calendar-day-${day}`}><span className="calendar-day-number">{day}</span>{entries.slice(0, 2).map(item => <button key={item.id} className="calendar-event" onClick={() => { setSelected(item); setScheduleDate(item.scheduledAt ? new Date(new Date(item.scheduledAt).getTime() - new Date(item.scheduledAt).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''); setError(''); }} title={item.title} data-testid={`button-calendar-item-${item.id}`}><i />{item.title}</button>)}{entries.length > 2 && <small className="calendar-more">+{entries.length - 2} more</small>}</div>; })}</div></div>
       <div className="calendar-legend"><span><i className="legend-dot" /> Scheduled content</span><span>{calendar.data?.length || 0} planned this month</span></div></section>
