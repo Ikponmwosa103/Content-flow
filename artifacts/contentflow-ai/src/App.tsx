@@ -365,7 +365,7 @@ function CreatePage() {
       ideas: 'Generate 20 specific, varied content ideas tailored to this brand and audience. For each idea include a hook, format, angle and suggested CTA. Avoid repetitive generic ideas.',
       assistant: 'Act as a practical marketing strategist. Answer the user request using the supplied brand context. Give clear, actionable recommendations, note assumptions, and never invent statistics or performance data.',
     };
-    const effectiveTopic = `${instructions[toolMode]}\n\nUser brief or source content:\n${topic.trim()}${toolMode === 'repurpose' ? `\n\nTarget platforms: ${repurposeTargets.join(', ')}` : ''}`;
+    const effectiveTopic = `${instructions[toolMode]}\n\nUser brief or source content:\n${topic.trim()}${toolMode === 'repurpose' ? `\n\nTarget platforms: ${repurposeTargets.join(', ')}` : ''}`.slice(0, 2000);
     generate.mutate({ data: { requestId: stableRequestId, brandId: Number(brandId), platform, contentType, topic: effectiveTopic, objective: objective || undefined, tone: tone || undefined, callToAction: cta || undefined } }, {
       onSuccess: result => { requestId.current = null; setDraft({ title: result.title, body: result.body }); void Promise.all([qc.invalidateQueries({ queryKey: getGetUsageQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]); },
       onError: error => setMessage(apiErrorMessage(error, 'The draft could not be generated. Please try again.')),
