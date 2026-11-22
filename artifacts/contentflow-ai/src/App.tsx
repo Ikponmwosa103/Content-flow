@@ -442,6 +442,7 @@ function Calendar() {
   const [plannerGoal, setPlannerGoal] = useState('');
   const [plannerTone, setPlannerTone] = useState('Helpful, clear and engaging');
   const [calendarPlan, setCalendarPlan] = useState<Array<{ day: number; title: string; body: string; platform: Platform; contentType: ContentType }>>([]);
+  const [calendarPlanMonth, setCalendarPlanMonth] = useState(month);
   const [plannerMessage, setPlannerMessage] = useState('');
   const [savingPlan, setSavingPlan] = useState(false);
   const plannerRequestId = useRef<string | null>(null);
@@ -497,6 +498,7 @@ function Calendar() {
           });
           if (!valid.length) throw new Error('No usable posts were returned. Please generate the plan again.');
           setCalendarPlan(valid);
+          setCalendarPlanMonth(month);
           setPlannerMessage(`Created ${valid.length} calendar ideas. Review them before adding them to your calendar.`);
         } catch (parseError) {
           setPlannerMessage(parseError instanceof Error ? parseError.message : 'The calendar plan could not be read. Please try again.');
@@ -514,8 +516,9 @@ function Calendar() {
     setPlannerMessage('');
     let saved = 0;
     try {
+      const [planYear, planMonth] = calendarPlanMonth.split('-').map(Number);
       for (const post of calendarPlan) {
-        const scheduledAt = new Date(year, mon - 1, post.day, 10, 0, 0).toISOString();
+        const scheduledAt = new Date(planYear, planMonth - 1, post.day, 10, 0, 0).toISOString();
         await create.mutateAsync({ data: { brandId: Number(plannerBrandId), title: post.title, body: post.body, platform: post.platform, contentType: post.contentType, status: 'scheduled', scheduledAt, tags: ['ai-calendar'] } });
         saved += 1;
       }
@@ -525,6 +528,7 @@ function Calendar() {
     } catch {
       setCalendarPlan(current => current.slice(saved));
       setPlannerMessage(`Saved ${saved} posts. The remaining posts are still here so you can retry.`);
+      await Promise.all([qc.invalidateQueries({ queryKey: getGetCalendarQueryKey() }), qc.invalidateQueries({ queryKey: getListContentsQueryKey() }), qc.invalidateQueries({ queryKey: getGetDashboardQueryKey() })]);
     } finally {
       setSavingPlan(false);
     }
@@ -539,7 +543,7 @@ function Calendar() {
         <Button type="submit" disabled={generate.isPending || !plannerBrandId} testId="button-generate-calendar"><WandSparkles size={15} /> {generate.isPending ? 'Building your calendar…' : `Generate ${new Date(year, mon - 1).toLocaleDateString(undefined, { month: 'long' })} plan`}</Button>
       </form>
       {plannerMessage && <p className="ai-calendar-message" role="status" data-testid="status-calendar-planner">{plannerMessage}</p>}
-      {calendarPlan.length > 0 && <div className="ai-calendar-preview"><div className="ai-calendar-preview-head"><strong>{calendarPlan.length} suggested posts</strong><Button onClick={() => void saveCalendarPlan()} disabled={savingPlan || create.isPending} testId="button-save-calendar-plan">{savingPlan ? 'Adding posts…' : 'Add all to calendar'}</Button></div><div className="ai-calendar-posts">{calendarPlan.map((post, index) => <article className="ai-calendar-post" key={`${post.day}-${index}`}><div className="ai-calendar-post-date"><b>{post.day}</b><span>{new Date(year, mon - 1, post.day).toLocaleDateString(undefined, { month: 'short' })}</span></div><div><strong>{post.title}</strong><p>{post.body}</p><span className="ai-calendar-post-meta">{label(post.platform)} · {label(post.contentType)} · 10:00 AM</span></div></article>)}</div></div>}
+      {calendarPlan.length > 0 && <div className="ai-calendar-preview"><div className="ai-calendar-preview-head"><strong>{calendarPlan.length} suggested posts</strong><Button onClick={() => void saveCalendarPlan()} disabled={savingPlan || create.isPending} testId="button-save-calendar-plan">{savingPlan ? 'Adding posts…' : 'Add all to calendar'}</Button></div><div className="ai-calendar-posts">{calendarPlan.map((post, index) => <article className="ai-calendar-post" key={`${post.day}-${index}`}><div className="ai-calendar-post-date"><b>{post.day}</b><span>{new Date(Number(calendarPlanMonth.slice(0, 4)), Number(calendarPlanMonth.slice(5, 7)) - 1, post.day).toLocaleDateString(undefined, { month: 'short' })}</span></div><div><strong>{post.title}</strong><p>{post.body}</p><span className="ai-calendar-post-meta">{label(post.platform)} · {label(post.contentType)} · 10:00 AM</span></div></article>)}</div></div>}
       <p className="ai-calendar-disclaimer">Generated posts are saved as scheduled items in your ContentFlow calendar. They are not automatically published to social platforms.</p>
     </section>
     <section className="calendar-panel surface fade-up"><div className="calendar-toolbar"><div><p className="eyebrow">PUBLISHING PLAN</p><h2 className="font-display" data-testid="text-calendar-month">{new Date(year, mon - 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2></div><div className="calendar-controls"><button className="icon-btn" aria-label="Previous month" onClick={prev} data-testid="button-calendar-previous"><ChevronLeft size={18} /></button><button className="btn btn-secondary calendar-today" onClick={() => { const d = new Date(); setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }} data-testid="button-calendar-today">Today</button><button className="icon-btn" aria-label="Next month" onClick={next} data-testid="button-calendar-next"><ChevronRight size={18} /></button></div></div>
