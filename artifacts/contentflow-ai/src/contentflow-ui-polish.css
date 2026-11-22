@@ -454,3 +454,11 @@ body, .app-frame, .main-area, .topbar {
   border-radius: 14px;
   background: #f7fafc;
 }
+
+
+/* AI workspace tool selector and platform targets. */
+.repurpose-targets { display: grid; gap: 9px; margin: 2px 0 12px; }
+.repurpose-target-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.repurpose-target { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--line, #e5e7eb); border-radius: 10px; color: var(--ink, #263342); font-size: 13px; cursor: pointer; }
+.repurpose-target input { accent-color: var(--green, #327b63); width: 15px; height: 15px; }
+@media (max-width: 520px) { .repurpose-target-grid { grid-template-columns: 1fr; } }
