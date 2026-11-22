@@ -462,3 +462,28 @@ body, .app-frame, .main-area, .topbar {
 .repurpose-target { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--line, #e5e7eb); border-radius: 10px; color: var(--ink, #263342); font-size: 13px; cursor: pointer; }
 .repurpose-target input { accent-color: var(--green, #327b63); width: 15px; height: 15px; }
 @media (max-width: 520px) { .repurpose-target-grid { grid-template-columns: 1fr; } }
+
+
+/* AI calendar planner */
+.ai-calendar-planner{padding:clamp(20px,3vw,32px);margin-bottom:26px;border:1px solid var(--line,#e7e1d5);border-radius:20px;background:linear-gradient(135deg,#fffefa 0%,#f5f8f3 100%)}
+.ai-calendar-heading{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:22px}
+.ai-calendar-heading h2{font-size:clamp(24px,3vw,34px);margin:6px 0}
+.ai-calendar-heading p:not(.eyebrow){max-width:620px;color:var(--muted,#777a7d);margin:0}
+.ai-calendar-badge{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #d9e8dc;border-radius:999px;background:#eef6ef;color:#327b63;font-size:12px;font-weight:700;white-space:nowrap}
+.ai-calendar-form{display:grid;grid-template-columns:1.1fr 1.5fr 1fr auto;gap:14px;align-items:end}
+.ai-calendar-form>.field{min-width:0}
+.ai-calendar-form>.btn{min-height:44px;white-space:nowrap}
+.ai-calendar-message{margin:16px 0 0;padding:11px 13px;border-radius:10px;background:#eef6ef;color:#28654f;font-size:13px}
+.ai-calendar-preview{margin-top:20px;padding-top:18px;border-top:1px solid #e7e1d5}
+.ai-calendar-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ai-calendar-posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ai-calendar-post{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;padding:14px;border:1px solid #e7e1d5;border-radius:13px;background:#fffefa}
+.ai-calendar-post-date{display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:start;padding:8px 4px;border-radius:10px;background:#edf4ee;color:#327b63}
+.ai-calendar-post-date b{font-size:21px;line-height:1.1}
+.ai-calendar-post-date span{font-size:10px;text-transform:uppercase;font-weight:700}
+.ai-calendar-post strong{display:block;font-size:14px;color:#222a3b}
+.ai-calendar-post p{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin:5px 0 8px;color:#686f70;font-size:12px;line-height:1.55;white-space:pre-wrap}
+.ai-calendar-post-meta{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#327b63;font-weight:700}
+.ai-calendar-disclaimer{margin:16px 0 0;color:#777a7d;font-size:11px}
+@media(max-width:900px){.ai-calendar-form{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-calendar-form>.btn{grid-column:1/-1}}
+@media(max-width:620px){.ai-calendar-heading{flex-direction:column}.ai-calendar-form,.ai-calendar-posts{grid-template-columns:1fr}.ai-calendar-form>.btn{grid-column:auto}.ai-calendar-preview-head{align-items:flex-start;flex-direction:column}}
